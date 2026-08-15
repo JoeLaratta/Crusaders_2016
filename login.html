@@ -70,7 +70,9 @@
 
   function show(el, text, kind) { el.className = "msg " + kind; el.textContent = text; }
   function clear(el) { el.className = "msg"; el.textContent = ""; }
-  function go(isCoach) { window.location.href = isCoach ? "/coach.html" : "/reports.html"; }
+  // Everyone lands on the handbook. The nav button there takes a parent to
+  // Reports and a coach to the portal.
+  function go(isCoach) { window.location.href = "/handbook.html"; }
 
   function openChange(prefillTemp) {
     loginPanel.classList.add("hidden");

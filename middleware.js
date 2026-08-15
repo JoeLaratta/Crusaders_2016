@@ -61,7 +61,7 @@ export default async function middleware(request) {
     // Page-level role split. This is UX only - the real coach gate is
     // requireSession({ requireCoach: true }) inside the API routes.
     if (path === '/coach.html' && !session.coach) {
-      return redirectTo(url.origin, '/reports.html');
+      return redirectTo(url.origin, '/handbook.html');
     }
 
     return next();

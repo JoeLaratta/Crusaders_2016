@@ -1,187 +1,843 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crusaders — Player Profiles</title>
-<link rel="icon" type="image/png" href="favicon.png">
-<meta name="robots" content="noindex, nofollow">
+<title>Coach Portal - 2016 Crusaders</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#FAF9F5; color:#121821; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding:32px 20px; }
-  .wrap { max-width:900px; margin:0 auto; }
-  h1 { font-size:26px; letter-spacing:0.06em; text-transform:uppercase; color:#B3161C; margin-bottom:4px; }
-  .sub { font-size:13px; color:#7A7266; margin-bottom:28px; }
-  .card { background:#fff; border-top:3px solid #B3161C; padding:24px; box-shadow:0 1px 3px rgba(18,24,33,0.08); }
-  label { display:block; font-size:13px; color:#3A3630; margin-bottom:6px; }
-  input[type=password] { width:100%; max-width:320px; font-size:16px; padding:10px 12px; border:1px solid #DCD5C8; border-radius:4px; background:#FBF9F5; }
-  button { font-size:14px; letter-spacing:0.1em; text-transform:uppercase; padding:11px 20px; border:0; border-radius:4px; background:#B3161C; color:#fff; cursor:pointer; }
-  button:disabled { opacity:0.5; cursor:default; }
-  button.ghost { background:transparent; color:#3A3630; border:1px solid #C9C1B2; padding:7px 14px; font-size:12px; }
-  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:16px; }
-  table { width:100%; border-collapse:collapse; margin-top:8px; }
-  th { text-align:left; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#7A7266; padding:10px 8px; border-bottom:2px solid #DCD5C8; }
-  td { padding:12px 8px; border-bottom:1px solid #EDE9E1; font-size:15px; }
-  .msg { margin-top:14px; font-size:14px; }
-  .err { color:#B3161C; }
-  .ok { color:#2E7D32; }
-  .hide { display:none; }
+  :root { --red:#C8102E; --dark:#111; --mid:#1c1c1c; --line:#333; --dim:#888; --ok:#3fa45b; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--dark); color:#eee;
+         font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; font-size:14px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:12px 20px; background:#0d0d0d; border-bottom:2px solid var(--red); flex-wrap:wrap; }
+  header h1 { margin:0; font-size:16px; letter-spacing:.5px; }
+  header h1 span { color:var(--red); }
+  .navlinks { display:flex; align-items:center; gap:14px; }
+  .navlinks a { color:#bbb; text-decoration:none; font-size:13px; }
+  .navlinks a:hover { color:#fff; }
+  .who { color:var(--dim); font-size:12px; }
+  nav.tabs { display:flex; gap:2px; padding:0 20px; background:#0d0d0d; border-bottom:1px solid var(--line); }
+  nav.tabs button { background:none; border:0; border-bottom:2px solid transparent; color:#999;
+                    padding:11px 16px; font-size:14px; cursor:pointer; }
+  nav.tabs button.active { color:#fff; border-bottom-color:var(--red); }
+  main { max-width:1000px; margin:0 auto; padding:22px 20px 80px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  h3 { font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--dim);
+       margin:26px 0 10px; }
+  .panel { background:var(--mid); border:1px solid var(--line); border-radius:8px;
+           padding:16px; margin-bottom:18px; }
+  label { display:block; font-size:12px; color:#aaa; margin:10px 0 5px; }
+  input[type=text], input[type=number], textarea, select {
+    width:100%; padding:9px 10px; background:#0d0d0d; border:1px solid var(--line);
+    border-radius:6px; color:#eee; font-size:14px; font-family:inherit; }
+  textarea { min-height:150px; resize:vertical; font-family:ui-monospace,Consolas,monospace; font-size:13px; }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--red); }
+  button.btn { background:var(--red); color:#fff; border:0; border-radius:6px;
+               padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer; }
+  button.btn.ghost { background:none; border:1px solid var(--line); color:#bbb; font-weight:400; }
+  button.btn.ghost:hover { color:#fff; border-color:#666; }
+  button.btn:disabled { opacity:.5; cursor:default; }
+  button.link { background:none; border:0; color:var(--red); cursor:pointer; font-size:13px; padding:0; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .row > div { flex:1; min-width:150px; }
+  .row > div.narrow { flex:0 0 110px; min-width:110px; }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.6px;
+       color:var(--dim); padding:8px 10px; border-bottom:1px solid var(--line); font-weight:600; }
+  td { padding:10px; border-bottom:1px solid #262626; vertical-align:middle; }
+  tr:last-child td { border-bottom:0; }
+  .msg { padding:10px 12px; border-radius:6px; font-size:13px; margin:12px 0; display:none; }
+  .msg.err { display:block; background:#3a1216; border:1px solid #6b1f28; color:#ffb3bd; }
+  .msg.ok { display:block; background:#12301a; border:1px solid #245c33; color:#a8e6b8; }
+  .msg.warn { display:block; background:#33280f; border:1px solid #6b551f; color:#f0d99b; }
+  .state { color:var(--dim); padding:20px 2px; }
+  .yes { color:var(--ok); font-weight:700; }
+  .no { color:#666; }
+  .tag { display:inline-block; background:#2a2a2a; border:1px solid var(--line); color:#ccc;
+         font-size:11px; padding:2px 7px; border-radius:10px; margin:2px 3px 2px 0; }
+  .pwbox { background:#0d0d0d; border:1px dashed var(--red); border-radius:6px;
+           padding:14px; margin:12px 0; }
+  .pwbox code { font-size:20px; letter-spacing:2px; color:#fff; font-family:ui-monospace,Consolas,monospace; }
+  .pwbox p { margin:8px 0 0; font-size:12px; color:#f0d99b; }
+  .hidden { display:none; }
+  .muted { color:var(--dim); font-size:12px; }
+  .filerow { display:flex; gap:10px; align-items:center; padding:8px 0;
+             border-bottom:1px solid #262626; flex-wrap:wrap; }
+  .filerow .fname { flex:1; min-width:170px; font-size:13px; word-break:break-all; }
+  .filerow select { flex:0 0 200px; }
+  .filerow .status { flex:0 0 90px; font-size:12px; text-align:right; }
+  @media (max-width:620px) {
+    td, th { padding:8px 6px; font-size:13px; }
+    .hide-sm { display:none; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Player Profiles</h1>
-  <div class="sub">2016 Crusaders — coaching staff only</div>
 
-  <div class="card" id="gate">
-    <label for="pw">Password</label>
-    <input type="password" id="pw" autocomplete="current-password">
-    <div class="row"><button id="go">View profiles</button></div>
-    <div class="msg err hide" id="gateMsg"></div>
+<header>
+  <h1>2016 <span>Crusaders</span> Coach Portal</h1>
+  <div class="navlinks">
+    <span class="who" id="who"></span>
+    <a href="/handbook.html">Return to the handbook</a>
+    <button class="btn ghost" id="logoutBtn" type="button">Sign Out</button>
   </div>
+</header>
 
-  <div class="card hide" id="panel">
-    <div class="row" style="margin:0 0 12px; justify-content:space-between">
-      <strong id="count"></strong>
-      <button class="ghost" id="out">Sign out</button>
+<nav class="tabs">
+  <button type="button" data-tab="players" class="active">Players</button>
+  <button type="button" data-tab="logins">Parent Logins</button>
+  <button type="button" data-tab="reports">Reports</button>
+</nav>
+
+<main>
+  <div id="globalMsg" class="msg"></div>
+
+  <!-- ============ PLAYERS ============ -->
+  <section id="tab-players">
+    <div class="panel">
+      <h2>Import roster</h2>
+      <p class="muted">Paste one player per line. Copy a name column straight from Excel,
+        or type them by hand. Add a jersey number after a comma or tab if you want one.</p>
+      <textarea id="rosterText" placeholder="Ava Smith&#10;Ben Smith, 19&#10;Charlie OBrien	7"></textarea>
+      <div class="row" style="margin-top:10px">
+        <div style="flex:0 0 auto"><button class="btn" id="rosterPreviewBtn" type="button">Preview</button></div>
+        <div style="flex:0 0 auto"><button class="btn ghost hidden" id="rosterCommitBtn" type="button">Import these players</button></div>
+      </div>
+      <div id="rosterMsg" class="msg"></div>
+      <div id="rosterPreview"></div>
     </div>
-    <table>
-      <thead><tr><th>Player</th><th>Jersey</th><th>Submitted</th><th></th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
-    <div class="msg hide" id="panelMsg"></div>
-  </div>
-</div>
+
+    <div class="panel">
+      <h2>Add a single player</h2>
+      <div class="row">
+        <div><label for="newPlayerName">Name</label>
+          <input type="text" id="newPlayerName" placeholder="Ava Smith"></div>
+        <div class="narrow"><label for="newPlayerJersey">Jersey</label>
+          <input type="text" id="newPlayerJersey" placeholder="7"></div>
+        <div style="flex:0 0 auto"><button class="btn" id="addPlayerBtn" type="button">Add</button></div>
+      </div>
+      <div id="addPlayerMsg" class="msg"></div>
+    </div>
+
+    <h3>Roster</h3>
+    <div class="panel" id="playersPanel"><p class="state">Loading...</p></div>
+
+    <h3>Profile submissions</h3>
+    <div class="panel" id="submissionsPanel"><p class="state">Loading...</p></div>
+  </section>
+
+  <!-- ============ LOGINS ============ -->
+  <section id="tab-logins" class="hidden">
+    <div class="panel">
+      <h2>Create a parent login</h2>
+      <p class="muted">One login per parent. A temporary password is generated and shown once.</p>
+      <div class="row">
+        <div><label for="newUsername">Username</label>
+          <input type="text" id="newUsername" placeholder="jsmith" autocapitalize="none" spellcheck="false"></div>
+        <div style="flex:0 0 auto"><button class="btn" id="createLoginBtn" type="button">Create login</button></div>
+      </div>
+      <label>Players this parent can see</label>
+      <div id="newLoginPlayers" class="muted">Loading players...</div>
+      <div id="createLoginMsg" class="msg"></div>
+      <div id="newPasswordBox"></div>
+    </div>
+
+    <h3>Existing logins</h3>
+    <div class="panel" id="loginsPanel"><p class="state">Loading...</p></div>
+  </section>
+
+  <!-- ============ REPORTS ============ -->
+  <section id="tab-reports" class="hidden">
+    <div class="panel">
+      <h2>Upload progress reports</h2>
+      <p class="muted">Choose one or more PDFs. Files whose names contain a player's first
+        and last name are matched automatically - check each one before uploading.
+        Maximum 3 MB per file.</p>
+      <input type="file" id="pdfFiles" accept="application/pdf,.pdf" multiple
+             style="margin:10px 0; color:#bbb">
+      <div id="fileList"></div>
+      <div class="row" style="margin-top:12px">
+        <div><label for="reportTitle">Title for these reports</label>
+          <input type="text" id="reportTitle" placeholder="Midseason Progress Report"></div>
+        <div style="flex:0 0 auto"><button class="btn" id="uploadBtn" type="button" disabled>Upload</button></div>
+      </div>
+      <div id="uploadMsg" class="msg"></div>
+    </div>
+
+    <h3>Published reports</h3>
+    <div class="panel" id="reportsPanel"><p class="state">Loading...</p></div>
+  </section>
+</main>
 
 <script>
-var pw = null;
+(function () {
+  "use strict";
 
-function $(id) { return document.getElementById(id); }
+  var ADMIN = "/api/admin?resource=";
+  var state = { players: [], logins: [], reports: [], submissions: [], files: [], rosterParsed: null };
 
-function show(el, text, cls) {
-  el.className = "msg " + (cls || "");
-  el.textContent = text;
-}
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
 
-async function post(path, payload) {
-  var r = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function show(el, text, kind) { el.className = "msg " + kind; el.textContent = text; }
+  function clear(el) { el.className = "msg"; el.textContent = ""; }
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  function fmtSize(bytes) {
+    if (!bytes && bytes !== 0) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+    return (bytes / 1024 / 1024).toFixed(1) + " MB";
+  }
+
+  // Any 401/403 means the session is gone or was downgraded - back to login.
+  function api(url, options) {
+    var opts = options || {};
+    opts.credentials = "same-origin";
+    if (opts.body && !opts.headers) opts.headers = { "Content-Type": "application/json" };
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401 || r.status === 403) {
+        window.location.href = "/login.html";
+        return Promise.reject(new Error("unauthorised"));
+      }
+      return r.json().then(function (d) {
+        if (!r.ok) return Promise.reject(new Error(d.error || "Request failed"));
+        return d;
+      });
+    });
+  }
+
+  // ---------- tabs ----------
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  Array.prototype.forEach.call(tabButtons, function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(tabButtons, function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      ["players", "logins", "reports"].forEach(function (t) {
+        $("tab-" + t).classList.toggle("hidden", t !== b.getAttribute("data-tab"));
+      });
+    });
   });
-  return r;
-}
 
-async function loadList() {
-  var r = await post("/api/list", { password: pw });
-  if (r.status === 401) { throw new Error("Incorrect password."); }
-  if (!r.ok) { throw new Error("Could not load profiles."); }
-  var out = await r.json();
-  return out.rows || [];
-}
-
-function render(rows) {
-  $("count").textContent = rows.length + (rows.length === 1 ? " profile" : " profiles");
-  var tbody = $("rows");
-  tbody.innerHTML = "";
-
-  if (!rows.length) {
-    var tr = document.createElement("tr");
-    var td = document.createElement("td");
-    td.colSpan = 4;
-    td.style.color = "#7A7266";
-    td.textContent = "No submissions yet.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-    return;
-  }
-
-  rows.forEach(function (row) {
-    var tr = document.createElement("tr");
-
-    var name = document.createElement("td");
-    name.textContent = row.full_name;
-    tr.appendChild(name);
-
-    var jersey = document.createElement("td");
-    jersey.textContent = row.jersey || "";
-    tr.appendChild(jersey);
-
-    var when = document.createElement("td");
-    when.style.color = "#7A7266";
-    when.style.fontSize = "13px";
-    when.textContent = new Date(row.created_at).toLocaleDateString("en-CA");
-    tr.appendChild(when);
-
-    var actions = document.createElement("td");
-    actions.style.textAlign = "right";
-    var btn = document.createElement("button");
-    btn.className = "ghost";
-    btn.textContent = "Download PDF";
-    btn.onclick = function () { download(row, btn); };
-    actions.appendChild(btn);
-    tr.appendChild(actions);
-
-    tbody.appendChild(tr);
+  $("logoutBtn").addEventListener("click", function () {
+    fetch("/api/logout", { method: "POST", credentials: "same-origin" })
+      .then(function () { window.location.href = "/login.html"; })
+      .catch(function () { window.location.href = "/login.html"; });
   });
-}
 
-async function download(row, btn) {
-  var original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Building...";
-  try {
-    var r = await post("/api/pdf", { password: pw, id: row.id });
-    if (!r.ok) { throw new Error("Failed"); }
-    var blob = await r.blob();
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = row.full_name.replace(/[^a-z0-9]+/gi, "_") + ".pdf";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    show($("panelMsg"), "Could not build that PDF. Try again.", "err");
-    $("panelMsg").classList.remove("hide");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
+  // ---------- players ----------
+  function renderPlayers() {
+    var el = $("playersPanel");
+    if (!state.players.length) {
+      el.innerHTML = '<p class="state">No players yet. Import a roster above to get started.</p>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Name</th><th>Jersey</th><th>Profile</th>' +
+      '<th class="hide-sm">Reports</th><th class="hide-sm">Parents</th><th></th></tr></thead><tbody>';
+    state.players.forEach(function (p) {
+      html += "<tr>" +
+        '<td><span class="pname" data-id="' + p.id + '">' + esc(p.name) + "</span></td>" +
+        "<td>" + (p.jersey ? esc(p.jersey) : '<span class="no">-</span>') + "</td>" +
+        "<td>" + (p.submissionCount > 0
+          ? '<span class="yes">Yes</span>'
+          : '<span class="no">Not yet</span>') + "</td>" +
+        '<td class="hide-sm">' + p.reportCount + "</td>" +
+        '<td class="hide-sm">' + (p.loginCount > 0 ? p.loginCount
+          : '<span class="no">none</span>') + "</td>" +
+        '<td><button class="link" data-edit="' + p.id + '">Edit</button></td>' +
+      "</tr>";
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+
+    Array.prototype.forEach.call(el.querySelectorAll("[data-edit]"), function (b) {
+      b.addEventListener("click", function () { editPlayer(Number(b.getAttribute("data-edit"))); });
+    });
   }
-}
 
-$("go").onclick = async function () {
-  var entered = $("pw").value;
-  if (!entered) { return; }
-  $("go").disabled = true;
-  $("gateMsg").classList.add("hide");
-  try {
-    pw = entered;
-    var rows = await loadList();
-    $("pw").value = "";
-    $("gate").classList.add("hide");
-    $("panel").classList.remove("hide");
-    render(rows);
-  } catch (e) {
-    pw = null;
-    show($("gateMsg"), e.message, "err");
-    $("gateMsg").classList.remove("hide");
-  } finally {
-    $("go").disabled = false;
+  function editPlayer(id) {
+    var p = null;
+    state.players.forEach(function (x) { if (x.id === id) p = x; });
+    if (!p) return;
+    var name = window.prompt("Player name", p.name);
+    if (name === null) return;
+    name = name.trim();
+    if (!name) { flash("Name cannot be empty.", "err"); return; }
+    var jersey = window.prompt("Jersey number (leave blank for none)", p.jersey || "");
+    if (jersey === null) return;
+    api(ADMIN + "players", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, name: name, jersey: jersey })
+    }).then(function () {
+      flash("Player updated.", "ok");
+      loadPlayers();
+    }).catch(function (e) { flash(e.message, "err"); });
   }
-};
 
-$("pw").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { $("go").click(); }
-});
+  function flash(text, kind) {
+    var el = $("globalMsg");
+    show(el, text, kind);
+    window.setTimeout(function () { clear(el); }, 4000);
+  }
 
-$("out").onclick = function () {
-  pw = null;
-  $("panel").classList.add("hide");
-  $("gate").classList.remove("hide");
-  $("rows").innerHTML = "";
-};
+  $("addPlayerBtn").addEventListener("click", function () {
+    var name = $("newPlayerName").value.trim();
+    var jersey = $("newPlayerJersey").value.trim();
+    var msg = $("addPlayerMsg");
+    if (!name) { show(msg, "Enter a player name.", "err"); return; }
+    clear(msg);
+    api(ADMIN + "players", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, jersey: jersey })
+    }).then(function (d) {
+      $("newPlayerName").value = "";
+      $("newPlayerJersey").value = "";
+      show(msg, d.duplicateName
+        ? "Added - note there is already another player with that name."
+        : "Player added.", d.duplicateName ? "warn" : "ok");
+      loadPlayers();
+    }).catch(function (e) { show(msg, e.message, "err"); });
+  });
+
+  // ---------- roster import ----------
+  $("rosterPreviewBtn").addEventListener("click", function () {
+    var text = $("rosterText").value;
+    var msg = $("rosterMsg");
+    if (!text.trim()) { show(msg, "Paste some names first.", "err"); return; }
+    clear(msg);
+    api(ADMIN + "roster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "preview", text: text })
+    }).then(function (d) {
+      state.rosterParsed = d;
+      renderRosterPreview(d);
+    }).catch(function (e) {
+      show(msg, e.message, "err");
+      $("rosterPreview").innerHTML = "";
+      $("rosterCommitBtn").classList.add("hidden");
+    });
+  });
+
+  function renderRosterPreview(d) {
+    var html = "";
+    if (d.toCreate.length) {
+      html += "<h3>Will be added (" + d.toCreate.length + ")</h3><p>";
+      d.toCreate.forEach(function (p) {
+        html += '<span class="tag">' + esc(p.name) +
+          (p.jersey ? " #" + esc(p.jersey) : "") + "</span>";
+      });
+      html += "</p>";
+    }
+    if (d.alreadyPresent.length) {
+      html += "<h3>Already on the roster (" + d.alreadyPresent.length + ", will be skipped)</h3><p>";
+      d.alreadyPresent.forEach(function (p) {
+        html += '<span class="tag">' + esc(p.name) + "</span>";
+      });
+      html += "</p>";
+    }
+    if (d.duplicateInPaste) {
+      html += '<p class="muted">' + d.duplicateInPaste +
+        " duplicate line(s) in the pasted text were ignored.</p>";
+    }
+    $("rosterPreview").innerHTML = html;
+    $("rosterCommitBtn").classList.toggle("hidden", d.toCreate.length === 0);
+    if (!d.toCreate.length) {
+      show($("rosterMsg"), "Nothing new to add - every name is already on the roster.", "warn");
+    }
+  }
+
+  $("rosterCommitBtn").addEventListener("click", function () {
+    var btn = $("rosterCommitBtn");
+    btn.disabled = true;
+    btn.textContent = "Importing...";
+    api(ADMIN + "roster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "commit", text: $("rosterText").value })
+    }).then(function (d) {
+      show($("rosterMsg"), "Added " + d.createdCount + " player(s)." +
+        (d.skippedCount ? " Skipped " + d.skippedCount + " already on the roster." : ""), "ok");
+      $("rosterText").value = "";
+      $("rosterPreview").innerHTML = "";
+      btn.classList.add("hidden");
+      loadPlayers();
+    }).catch(function (e) {
+      show($("rosterMsg"), e.message, "err");
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = "Import these players";
+    });
+  });
+
+  // ---------- submissions ----------
+  function renderSubmissions() {
+    var el = $("submissionsPanel");
+    if (!state.submissions.length) {
+      el.innerHTML = '<p class="state">No profile forms have been submitted yet.</p>';
+      return;
+    }
+    var unlinked = state.submissions.filter(function (s) { return s.playerId == null; });
+    var html = "";
+    if (unlinked.length) {
+      html += '<div class="msg warn" style="display:block">' + unlinked.length +
+        " submission(s) are not yet linked to a player. Parents cannot be matched to " +
+        "their child's profile until they are.</div>";
+    }
+    html += '<table><thead><tr><th>Submitted by</th><th class="hide-sm">Date</th>' +
+      "<th>Linked player</th><th></th></tr></thead><tbody>";
+    state.submissions.forEach(function (s) {
+      html += "<tr><td>" + esc(s.fullName) +
+        (s.jersey ? ' <span class="muted">#' + esc(s.jersey) + "</span>" : "") + "</td>" +
+        '<td class="hide-sm">' + esc(fmtDate(s.createdAt)) + "</td>" +
+        "<td>" + playerSelect("sub-" + s.id, s.playerId) + "</td>" +
+        '<td><a class="link" href="/api/pdf?id=' + s.id +
+          '" target="_blank" rel="noopener">PDF</a></td></tr>';
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+
+    Array.prototype.forEach.call(el.querySelectorAll("select[data-sub]"), function (sel) {
+      sel.addEventListener("change", function () {
+        var subId = Number(sel.getAttribute("data-sub"));
+        api(ADMIN + "players", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ submissionId: subId, playerId: sel.value || null })
+        }).then(function () {
+          flash("Submission linked.", "ok");
+          loadPlayers();
+          loadSubmissions();
+        }).catch(function (e) { flash(e.message, "err"); });
+      });
+    });
+  }
+
+  function playerSelect(domId, selectedId) {
+    var subId = domId.replace("sub-", "");
+    var html = '<select data-sub="' + esc(subId) + '"><option value="">- not linked -</option>';
+    state.players.forEach(function (p) {
+      html += '<option value="' + p.id + '"' +
+        (Number(selectedId) === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>";
+    });
+    return html + "</select>";
+  }
+
+  // ---------- logins ----------
+  function renderNewLoginPlayers() {
+    var el = $("newLoginPlayers");
+    if (!state.players.length) {
+      el.innerHTML = '<span class="muted">Add players first.</span>';
+      return;
+    }
+    var html = "";
+    state.players.forEach(function (p) {
+      html += '<label style="display:inline-flex; align-items:center; gap:6px; margin:4px 14px 4px 0; font-size:13px; color:#ddd">' +
+        '<input type="checkbox" class="newpl" value="' + p.id + '" style="width:auto"> ' +
+        esc(p.name) + "</label>";
+    });
+    el.innerHTML = html;
+  }
+
+  function checkedPlayerIds(selector) {
+    var out = [];
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function (c) {
+      if (c.checked) out.push(Number(c.value));
+    });
+    return out;
+  }
+
+  $("createLoginBtn").addEventListener("click", function () {
+    var username = $("newUsername").value.trim();
+    var msg = $("createLoginMsg");
+    if (!username) { show(msg, "Enter a username.", "err"); return; }
+    clear(msg);
+    api(ADMIN + "logins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username, playerIds: checkedPlayerIds(".newpl") })
+    }).then(function (d) {
+      $("newUsername").value = "";
+      Array.prototype.forEach.call(document.querySelectorAll(".newpl"), function (c) { c.checked = false; });
+      showPassword(d.login.username, d.tempPassword);
+      loadLogins();
+    }).catch(function (e) { show(msg, e.message, "err"); });
+  });
+
+  // Shown once. There is no way to retrieve it later - only reset for a new one.
+  function showPassword(username, password) {
+    $("newPasswordBox").innerHTML =
+      '<div class="pwbox"><div class="muted">Temporary password for <strong>' +
+      esc(username) + "</strong></div><code>" + esc(password) + "</code>" +
+      "<p>Write this down now. It cannot be shown again - you would have to reset " +
+      "the password to get a new one. The parent must change it at first sign in.</p>" +
+      '<button class="btn ghost" type="button" id="dismissPw" style="margin-top:10px">Done</button></div>';
+    $("dismissPw").addEventListener("click", function () {
+      $("newPasswordBox").innerHTML = "";
+    });
+  }
+
+  function renderLogins() {
+    var el = $("loginsPanel");
+    if (!state.logins.length) {
+      el.innerHTML = '<p class="state">No logins yet.</p>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Username</th><th>Players</th>' +
+      '<th class="hide-sm">Status</th><th></th></tr></thead><tbody>';
+    state.logins.forEach(function (l) {
+      var players = l.players.length
+        ? l.players.map(function (p) { return '<span class="tag">' + esc(p.name) + "</span>"; }).join("")
+        : (l.isCoach ? '<span class="muted">coach</span>' : '<span class="no">none assigned</span>');
+      html += "<tr><td>" + esc(l.username) +
+        (l.isCoach ? ' <span class="tag">coach</span>' : "") +
+        (l.isSelf ? ' <span class="muted">(you)</span>' : "") + "</td>" +
+        "<td>" + players + "</td>" +
+        '<td class="hide-sm">' + (l.mustChange
+          ? '<span class="muted">must change password</span>'
+          : '<span class="yes">active</span>') + "</td>" +
+        '<td style="white-space:nowrap">' +
+          (l.isCoach ? "" : '<button class="link" data-assign="' + l.id + '">Players</button> ') +
+          '<button class="link" data-reset="' + l.id + '">Reset</button>' +
+          (l.isSelf ? "" : ' <button class="link" data-del="' + l.id + '">Delete</button>') +
+        "</td></tr>";
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+
+    Array.prototype.forEach.call(el.querySelectorAll("[data-reset]"), function (b) {
+      b.addEventListener("click", function () { resetLogin(Number(b.getAttribute("data-reset"))); });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll("[data-del]"), function (b) {
+      b.addEventListener("click", function () { deleteLogin(Number(b.getAttribute("data-del"))); });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll("[data-assign]"), function (b) {
+      b.addEventListener("click", function () { assignPlayers(Number(b.getAttribute("data-assign"))); });
+    });
+  }
+
+  function findLogin(id) {
+    var found = null;
+    state.logins.forEach(function (l) { if (l.id === id) found = l; });
+    return found;
+  }
+
+  function resetLogin(id) {
+    var l = findLogin(id);
+    if (!l) return;
+    var warning = l.isSelf
+      ? "Reset YOUR OWN password? You will be signed out immediately and must sign back in with the new temporary password."
+      : "Reset the password for " + l.username + "? They will be signed out everywhere and must set a new password at next sign in.";
+    if (!window.confirm(warning)) return;
+    api(ADMIN + "logins", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, action: "reset" })
+    }).then(function (d) {
+      showPassword(d.login.username, d.tempPassword);
+      if (d.signedOutSelf) {
+        window.alert("Your session has ended. Write the password down, then sign in again.");
+      }
+      loadLogins();
+    }).catch(function (e) { flash(e.message, "err"); });
+  }
+
+  function deleteLogin(id) {
+    var l = findLogin(id);
+    if (!l) return;
+    if (!window.confirm("Delete the login " + l.username +
+      "? This cannot be undone. Their record of which reports they have opened will also be removed.")) return;
+    api(ADMIN + "logins", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    }).then(function (d) {
+      flash("Deleted " + d.username + ".", "ok");
+      loadLogins();
+      loadPlayers();
+    }).catch(function (e) { flash(e.message, "err"); });
+  }
+
+  function assignPlayers(id) {
+    var l = findLogin(id);
+    if (!l) return;
+    var current = l.players.map(function (p) { return p.id; });
+    var lines = state.players.map(function (p, i) {
+      return (i + 1) + ". " + p.name + (current.indexOf(p.id) !== -1 ? "  [assigned]" : "");
+    }).join("\n");
+    var answer = window.prompt(
+      "Players for " + l.username + "\n\n" + lines +
+      "\n\nEnter the numbers to assign, separated by commas (blank to unassign all):",
+      current.map(function (pid) {
+        var idx = -1;
+        state.players.forEach(function (p, i) { if (p.id === pid) idx = i + 1; });
+        return idx;
+      }).filter(function (n) { return n > 0; }).join(","));
+    if (answer === null) return;
+    var picked = [];
+    answer.split(",").forEach(function (part) {
+      var n = parseInt(part.trim(), 10);
+      if (n >= 1 && n <= state.players.length) {
+        var pid = state.players[n - 1].id;
+        if (picked.indexOf(pid) === -1) picked.push(pid);
+      }
+    });
+    api(ADMIN + "logins", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, action: "assign", playerIds: picked })
+    }).then(function () {
+      flash("Players updated for " + l.username + ".", "ok");
+      loadLogins();
+      loadPlayers();
+    }).catch(function (e) { flash(e.message, "err"); });
+  }
+
+  // ---------- reports ----------
+  function normName(s) {
+    return String(s).toLowerCase()
+      .replace(/\.pdf$/i, "")
+      .replace(/['\u2019]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  // Match a filename to a player by requiring EVERY token of the player's name
+  // to appear as a WHOLE WORD in the filename. Whole-word matching is essential:
+  // with substring matching, "Jackson_Lightfoot.pdf" matches a player called
+  // "Jack Li" (jack inside jackson, li inside lightfoot) and one child's report
+  // gets published to another family. Ties break toward the longer name, so
+  // "Samantha Ngo" wins over "Sam Ng" on a Samantha file.
+  function matchPlayer(filename) {
+    var words = Object.create(null);
+    normName(filename).split(" ").forEach(function (w) { if (w) words[w] = true; });
+    var best = null;
+    var bestScore = 0;
+    state.players.forEach(function (p) {
+      var tokens = normName(p.name).split(" ").filter(function (t) { return t.length > 1; });
+      if (!tokens.length) return;
+      var all = tokens.every(function (t) { return words[t] === true; });
+      if (!all) return;
+      var score = tokens.join("").length;
+      if (score > bestScore) { best = p; bestScore = score; }
+    });
+    return best;
+  }
+
+  $("pdfFiles").addEventListener("change", function (e) {
+    state.files = Array.prototype.slice.call(e.target.files).map(function (f) {
+      var m = matchPlayer(f.name);
+      return { file: f, playerId: m ? m.id : null, status: "" };
+    });
+    renderFileList();
+  });
+
+  function renderFileList() {
+    var el = $("fileList");
+    if (!state.files.length) { el.innerHTML = ""; $("uploadBtn").disabled = true; return; }
+    var html = "";
+    var unmatched = 0;
+    state.files.forEach(function (f, i) {
+      if (f.playerId === null) unmatched++;
+      html += '<div class="filerow"><span class="fname">' + esc(f.file.name) +
+        ' <span class="muted">' + fmtSize(f.file.size) + "</span></span>" +
+        '<select data-file="' + i + '"><option value="">- choose player -</option>';
+      state.players.forEach(function (p) {
+        html += '<option value="' + p.id + '"' +
+          (f.playerId === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>";
+      });
+      html += '</select><span class="status" id="fstatus-' + i + '">' + esc(f.status) + "</span></div>";
+    });
+    if (unmatched) {
+      html = '<div class="msg warn" style="display:block">' + unmatched +
+        " file(s) could not be matched to a player automatically. Choose the player for each.</div>" + html;
+    }
+    el.innerHTML = html;
+    Array.prototype.forEach.call(el.querySelectorAll("select[data-file]"), function (sel) {
+      sel.addEventListener("change", function () {
+        state.files[Number(sel.getAttribute("data-file"))].playerId = sel.value ? Number(sel.value) : null;
+      });
+    });
+    $("uploadBtn").disabled = false;
+  }
+
+  function readAsBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(",")[1]); };
+      r.onerror = function () { reject(new Error("Could not read " + file.name)); };
+      r.readAsDataURL(file);
+    });
+  }
+
+  $("uploadBtn").addEventListener("click", function () {
+    var title = $("reportTitle").value.trim();
+    var msg = $("uploadMsg");
+    if (!title) { show(msg, "Enter a title for these reports.", "err"); return; }
+    var missing = state.files.filter(function (f) { return f.playerId === null; });
+    if (missing.length) { show(msg, "Choose a player for every file first.", "err"); return; }
+    if (!state.files.length) { show(msg, "Choose some PDF files first.", "err"); return; }
+
+    clear(msg);
+    var btn = $("uploadBtn");
+    btn.disabled = true;
+    var done = 0, failed = 0;
+
+    // Sequential, not parallel: keeps well clear of rate limits and makes a
+    // partial failure easy to read off the per-file status.
+    var chain = Promise.resolve();
+    state.files.forEach(function (f, i) {
+      chain = chain.then(function () {
+        var cell = $("fstatus-" + i);
+        if (cell) cell.textContent = "uploading";
+        return readAsBase64(f.file).then(function (b64) {
+          return api(ADMIN + "reports", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ playerId: f.playerId, title: title, pdfBase64: b64 })
+          });
+        }).then(function () {
+          done++;
+          if (cell) { cell.textContent = "done"; cell.style.color = "#3fa45b"; }
+        }).catch(function (e) {
+          failed++;
+          if (cell) { cell.textContent = "failed"; cell.style.color = "#ff8695"; cell.title = e.message; }
+        });
+      });
+    });
+
+    chain.then(function () {
+      btn.disabled = false;
+      show(msg, "Uploaded " + done + " report(s)." +
+        (failed ? " " + failed + " failed - hover a failed row for the reason." : ""),
+        failed ? "warn" : "ok");
+      if (!failed) {
+        state.files = [];
+        $("pdfFiles").value = "";
+        $("fileList").innerHTML = "";
+        $("reportTitle").value = "";
+        btn.disabled = true;
+      }
+      loadReports();
+      loadPlayers();
+    });
+  });
+
+  function renderReports() {
+    var el = $("reportsPanel");
+    if (!state.reports.length) {
+      el.innerHTML = '<p class="state">No reports published yet.</p>';
+      return;
+    }
+    var html = '<table><thead><tr><th>Player</th><th>Title</th><th class="hide-sm">Published</th>' +
+      "<th>Downloaded</th><th></th></tr></thead><tbody>";
+    state.reports.forEach(function (r) {
+      var opened = r.viewers.length;
+      var names = r.viewers.map(function (v) {
+        return '<span class="tag">' + esc(v.username) + "</span>";
+      }).join("");
+      var statusText = r.audience === 0
+        ? '<span class="no">no parent linked</span>'
+        : (opened + " of " + r.audience);
+      html += "<tr><td>" + esc(r.playerName) +
+        (r.jersey ? ' <span class="muted">#' + esc(r.jersey) + "</span>" : "") + "</td>" +
+        "<td>" + esc(r.title) + ' <span class="muted">' + fmtSize(r.sizeBytes) + "</span></td>" +
+        '<td class="hide-sm">' + esc(fmtDate(r.publishedAt)) + "</td>" +
+        "<td>" + (opened === r.audience && r.audience > 0
+          ? '<span class="yes">' + statusText + "</span>"
+          : statusText) + "<br>" + names + "</td>" +
+        '<td style="white-space:nowrap">' +
+          '<a class="link" href="/api/report-pdf?id=' + r.id + '" target="_blank" rel="noopener">View</a> ' +
+          '<button class="link" data-delrep="' + r.id + '">Delete</button>' +
+        "</td></tr>";
+    });
+    html += "</tbody></table>";
+    el.innerHTML = html;
+
+    Array.prototype.forEach.call(el.querySelectorAll("[data-delrep]"), function (b) {
+      b.addEventListener("click", function () {
+        var id = Number(b.getAttribute("data-delrep"));
+        var rep = null;
+        state.reports.forEach(function (x) { if (x.id === id) rep = x; });
+        if (!rep) return;
+        if (!window.confirm('Delete "' + rep.title + '" for ' + rep.playerName +
+          "? Parents will no longer be able to open it.")) return;
+        api(ADMIN + "reports", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: id })
+        }).then(function () {
+          flash("Report deleted.", "ok");
+          loadReports();
+          loadPlayers();
+        }).catch(function (e) { flash(e.message, "err"); });
+      });
+    });
+  }
+
+  // ---------- loaders ----------
+  function loadPlayers() {
+    return api(ADMIN + "players").then(function (d) {
+      state.players = d.players || [];
+      renderPlayers();
+      renderNewLoginPlayers();
+      renderSubmissions();
+    }).catch(function (e) {
+      $("playersPanel").innerHTML = '<p class="state">' + esc(e.message) + "</p>";
+    });
+  }
+
+  function loadSubmissions() {
+    return api("/api/list").then(function (d) {
+      state.submissions = d.rows || [];
+      renderSubmissions();
+    }).catch(function (e) {
+      $("submissionsPanel").innerHTML = '<p class="state">' + esc(e.message) + "</p>";
+    });
+  }
+
+  function loadLogins() {
+    return api(ADMIN + "logins").then(function (d) {
+      state.logins = d.logins || [];
+      renderLogins();
+    }).catch(function (e) {
+      $("loginsPanel").innerHTML = '<p class="state">' + esc(e.message) + "</p>";
+    });
+  }
+
+  function loadReports() {
+    return api(ADMIN + "reports").then(function (d) {
+      state.reports = d.reports || [];
+      renderReports();
+    }).catch(function (e) {
+      $("reportsPanel").innerHTML = '<p class="state">' + esc(e.message) + "</p>";
+    });
+  }
+
+  // ---------- start ----------
+  api("/api/me").then(function (me) {
+    if (!me.isCoach) { window.location.href = "/reports.html"; return; }
+    $("who").textContent = "Signed in as " + me.username;
+    loadPlayers().then(loadSubmissions);
+    loadLogins();
+    loadReports();
+  }).catch(function () { /* api() already redirected */ });
+})();
 </script>
 </body>
 </html>
