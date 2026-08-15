@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progress Reports - 2016 Crusaders</title>
+<style>
+  :root { --red: #C8102E; --dark: #111; --mid: #1c1c1c; --line: #333; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--dark); color:#eee;
+         font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:14px 20px; background:#0d0d0d; border-bottom:2px solid var(--red); }
+  header h1 { margin:0; font-size:16px; letter-spacing:.5px; font-weight:600; }
+  header h1 span { color:var(--red); }
+  .navlinks { display:flex; align-items:center; gap:14px; }
+  .navlinks a { color:#bbb; text-decoration:none; font-size:13px; }
+  .navlinks a:hover { color:#fff; }
+  .navlinks button { background:none; border:1px solid var(--line); color:#bbb;
+                     padding:6px 12px; border-radius:5px; font-size:13px; cursor:pointer; }
+  .navlinks button:hover { color:#fff; border-color:#666; }
+  main { max-width:760px; margin:0 auto; padding:24px 20px 60px; }
+  .who { font-size:13px; color:#888; margin:0 0 24px; }
+  h2 { font-size:15px; margin:28px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  h2 .jersey { color:var(--red); font-weight:700; margin-right:8px; }
+  .report { display:flex; align-items:center; justify-content:space-between; gap:14px;
+            background:var(--mid); border:1px solid var(--line); border-radius:8px;
+            padding:14px 16px; margin-bottom:10px; }
+  .report .meta { min-width:0; }
+  .report .title { font-size:15px; margin:0 0 3px; }
+  .report .date { font-size:12px; color:#888; margin:0; }
+  .badge { display:inline-block; background:var(--red); color:#fff; font-size:10px;
+           font-weight:700; letter-spacing:.6px; padding:2px 7px; border-radius:10px;
+           margin-left:8px; vertical-align:middle; }
+  .open { flex-shrink:0; background:var(--red); color:#fff; text-decoration:none;
+          padding:9px 16px; border-radius:6px; font-size:14px; font-weight:600; }
+  .state { padding:32px 4px; color:#888; font-size:14px; }
+  .empty { background:var(--mid); border:1px dashed var(--line); border-radius:8px;
+           padding:26px; text-align:center; color:#888; font-size:14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>2016 <span>Crusaders</span></h1>
+  <div class="navlinks">
+    <a href="/handbook.html">Handbook</a>
+    <button id="logoutBtn" type="button">Sign Out</button>
+  </div>
+</header>
+
+<main>
+  <p class="who" id="who"></p>
+  <div id="content"><p class="state">Loading reports...</p></div>
+</main>
+
+<script>
+(function () {
+  var content = document.getElementById("content");
+  var who = document.getElementById("who");
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  function render(players, reports) {
+    if (!reports.length) {
+      content.innerHTML = '<div class="empty">No progress reports have been posted yet.' +
+        ' You will see them here as soon as Coach Steve publishes them.</div>';
+      return;
+    }
+    // Group by player so a two-child family gets a section each.
+    var order = [];
+    var byPlayer = {};
+    reports.forEach(function (r) {
+      if (!byPlayer[r.playerId]) { byPlayer[r.playerId] = []; order.push(r.playerId); }
+      byPlayer[r.playerId].push(r);
+    });
+
+    var html = "";
+    order.forEach(function (pid) {
+      var list = byPlayer[pid];
+      var jersey = list[0].jersey ? '<span class="jersey">#' + esc(list[0].jersey) + '</span>' : "";
+      html += "<h2>" + jersey + esc(list[0].playerName) + "</h2>";
+      list.forEach(function (r) {
+        html += '<div class="report">' +
+          '<div class="meta">' +
+            '<p class="title">' + esc(r.title) +
+              (r.viewed ? "" : '<span class="badge">NEW</span>') + "</p>" +
+            '<p class="date">' + esc(fmtDate(r.publishedAt)) + "</p>" +
+          "</div>" +
+          '<a class="open" href="/api/report-pdf?id=' + encodeURIComponent(r.id) +
+            '" target="_blank" rel="noopener">Open</a>' +
+        "</div>";
+      });
+    });
+    content.innerHTML = html;
+  }
+
+  function load() {
+    Promise.all([
+      fetch("/api/me", { credentials: "same-origin" }),
+      fetch("/api/reports", { credentials: "same-origin" })
+    ])
+      .then(function (rs) {
+        // Middleware normally catches this, but a session can expire mid-visit.
+        if (rs[0].status === 401 || rs[1].status === 401) {
+          window.location.href = "/login.html";
+          return null;
+        }
+        if (rs[0].status === 403 || rs[1].status === 403) {
+          window.location.href = "/login.html";
+          return null;
+        }
+        if (!rs[0].ok || !rs[1].ok) throw new Error("load failed");
+        return Promise.all([rs[0].json(), rs[1].json()]);
+      })
+      .then(function (data) {
+        if (!data) return;
+        var me = data[0];
+        var names = (me.players || []).map(function (p) { return p.name; });
+        who.textContent = names.length
+          ? "Signed in as " + me.username + " - " + names.join(" and ")
+          : "Signed in as " + me.username;
+        render(me.players || [], data[1].reports || []);
+      })
+      .catch(function () {
+        content.innerHTML = '<p class="state">Could not load reports. Please refresh to try again.</p>';
+      });
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", function () {
+    fetch("/api/logout", { method: "POST", credentials: "same-origin" })
+      .then(function () { window.location.href = "/login.html"; })
+      .catch(function () { window.location.href = "/login.html"; });
+  });
+
+  // Opening a PDF marks it read server-side; refresh on return so the NEW badge clears.
+  window.addEventListener("focus", load);
+
+  load();
+})();
+</script>
+</body>
+</html>

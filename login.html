@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign In - 2016 Crusaders</title>
+<style>
+  :root { --red: #C8102E; --dark: #111; --mid: #1c1c1c; --line: #333; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--dark); color:#eee; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:20px; }
+  .card { width:100%; max-width:380px; background:var(--mid); border:1px solid var(--line);
+          border-radius:10px; padding:28px; }
+  h1 { margin:0 0 4px; font-size:20px; letter-spacing:.5px; }
+  h1 span { color:var(--red); }
+  p.sub { margin:0 0 22px; font-size:13px; color:#999; }
+  label { display:block; font-size:12px; text-transform:uppercase; letter-spacing:.6px;
+          color:#aaa; margin:14px 0 6px; }
+  input { width:100%; padding:11px 12px; background:#0d0d0d; border:1px solid var(--line);
+          border-radius:6px; color:#eee; font-size:15px; }
+  input:focus { outline:none; border-color:var(--red); }
+  button { width:100%; margin-top:20px; padding:12px; background:var(--red); border:0;
+           border-radius:6px; color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.55; cursor:default; }
+  .msg { margin-top:16px; padding:10px 12px; border-radius:6px; font-size:13px; display:none; }
+  .msg.err { display:block; background:#3a1216; border:1px solid #6b1f28; color:#ffb3bd; }
+  .msg.ok  { display:block; background:#12301a; border:1px solid #245c33; color:#a8e6b8; }
+  .hint { margin-top:14px; font-size:12px; color:#888; line-height:1.5; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div id="loginPanel" class="hidden">
+    <h1>2016 <span>Crusaders</span></h1>
+    <p class="sub">Parent and coach sign in</p>
+    <label for="u">Username</label>
+    <input id="u" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <label for="p">Password</label>
+    <input id="p" type="password" autocomplete="current-password">
+    <button id="loginBtn" type="button">Sign In</button>
+    <div id="loginMsg" class="msg"></div>
+    <p class="hint">Need access or forgot your password? Contact Coach Steve.</p>
+  </div>
+
+  <div id="changePanel" class="hidden">
+    <h1>Choose a <span>Password</span></h1>
+    <p class="sub">Set your own password before continuing</p>
+    <label for="cp">Temporary password</label>
+    <input id="cp" type="password" autocomplete="current-password">
+    <label for="np">New password</label>
+    <input id="np" type="password" autocomplete="new-password">
+    <label for="np2">Confirm new password</label>
+    <input id="np2" type="password" autocomplete="new-password">
+    <button id="changeBtn" type="button">Save Password</button>
+    <div id="changeMsg" class="msg"></div>
+    <p class="hint">At least 8 characters. This signs you out of any other devices.</p>
+  </div>
+
+</div>
+<script>
+(function () {
+  var loginPanel = document.getElementById("loginPanel");
+  var changePanel = document.getElementById("changePanel");
+  var loginMsg = document.getElementById("loginMsg");
+  var changeMsg = document.getElementById("changeMsg");
+  var loginBtn = document.getElementById("loginBtn");
+  var changeBtn = document.getElementById("changeBtn");
+
+  function show(el, text, kind) { el.className = "msg " + kind; el.textContent = text; }
+  function clear(el) { el.className = "msg"; el.textContent = ""; }
+  function go(isCoach) { window.location.href = isCoach ? "/coach.html" : "/reports.html"; }
+
+  function openChange(prefillTemp) {
+    loginPanel.classList.add("hidden");
+    changePanel.classList.remove("hidden");
+    if (prefillTemp) { document.getElementById("cp").value = prefillTemp; }
+    document.getElementById("np").focus();
+  }
+
+  // If a full session already exists, skip the form entirely.
+  fetch("/api/me", { credentials: "same-origin" })
+    .then(function (r) {
+      if (r.ok) { return r.json().then(function (d) { go(d.isCoach); }); }
+      if (r.status === 403) { openChange(null); return; }
+      loginPanel.classList.remove("hidden");
+      document.getElementById("u").focus();
+    })
+    .catch(function () { loginPanel.classList.remove("hidden"); });
+
+  loginBtn.addEventListener("click", function () {
+    var u = document.getElementById("u").value.trim();
+    var p = document.getElementById("p").value;
+    if (!u || !p) { show(loginMsg, "Enter your username and password.", "err"); return; }
+    clear(loginMsg);
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Signing in...";
+    fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ username: u, password: p })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          show(loginMsg, res.d.error || "Sign in failed.", "err");
+          return;
+        }
+        if (res.d.mustChange) { openChange(p); return; }
+        go(res.d.isCoach);
+      })
+      .catch(function () { show(loginMsg, "Network error. Please try again.", "err"); })
+      .then(function () { loginBtn.disabled = false; loginBtn.textContent = "Sign In"; });
+  });
+
+  changeBtn.addEventListener("click", function () {
+    var cp = document.getElementById("cp").value;
+    var np = document.getElementById("np").value;
+    var np2 = document.getElementById("np2").value;
+    if (!cp || !np) { show(changeMsg, "Fill in every field.", "err"); return; }
+    if (np !== np2) { show(changeMsg, "New passwords do not match.", "err"); return; }
+    if (np.length < 8) { show(changeMsg, "New password must be at least 8 characters.", "err"); return; }
+    if (np === cp) { show(changeMsg, "Choose a password different from the temporary one.", "err"); return; }
+    clear(changeMsg);
+    changeBtn.disabled = true;
+    changeBtn.textContent = "Saving...";
+    fetch("/api/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ currentPassword: cp, newPassword: np })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          show(changeMsg, res.d.error || "Could not save password.", "err");
+          return;
+        }
+        show(changeMsg, "Password saved. Taking you in...", "ok");
+        setTimeout(function () { go(res.d.isCoach); }, 700);
+      })
+      .catch(function () { show(changeMsg, "Network error. Please try again.", "err"); })
+      .then(function () { changeBtn.disabled = false; changeBtn.textContent = "Save Password"; });
+  });
+
+  // Enter key submits the visible panel.
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    if (!changePanel.classList.contains("hidden")) { changeBtn.click(); }
+    else if (!loginPanel.classList.contains("hidden")) { loginBtn.click(); }
+  });
+})();
+</script>
+</body>
+</html>

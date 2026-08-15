@@ -1,34 +1,48 @@
-﻿import { neon } from '@neondatabase/serverless';
-import { timingSafeEqual } from 'node:crypto';
+// api/list.js - coach-only list of profile submissions.
+// Converted from COACH_PASSWORD to session auth (is_coach flag).
+import { neon } from '@neondatabase/serverless';
+import { requireSession, checkVersion } from '../lib/auth.js';
 
 const sql = neon(process.env.DATABASE_URL);
 
-// Constant-time comparison so the password cannot be guessed
-// character-by-character from response timing.
-function passwordOk(supplied) {
-  const expected = process.env.COACH_PASSWORD || '';
-  if (!expected) return false;
-  const a = Buffer.from(String(supplied ?? ''), 'utf8');
-  const b = Buffer.from(expected, 'utf8');
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  if (!passwordOk(req.body?.password)) {
-    return res.status(401).json({ error: 'Incorrect password.' });
-  }
+
+  const session = await requireSession(req, res, { requireCoach: true });
+  if (!session) return;
 
   try {
-    const rows = await sql`
-      SELECT id, created_at, full_name, jersey
-      FROM submissions
-      ORDER BY created_at DESC
+    const loginRows = await sql`
+      select id, token_version from logins where id = ${session.lid} limit 1
     `;
-    return res.status(200).json({ ok: true, rows });
+    if (loginRows.length === 0) {
+      return res.status(401).json({ error: 'Not signed in' });
+    }
+    if (!checkVersion(session, loginRows[0])) {
+      return res.status(401).json({ error: 'Session expired, please sign in again' });
+    }
+
+    const rows = await sql`
+      select id, created_at, full_name, jersey, player_id
+      from submissions
+      order by created_at desc
+    `;
+
+    return res.status(200).json({
+      ok: true,
+      rows: rows.map(function (r) {
+        return {
+          id: Number(r.id),
+          createdAt: r.created_at,
+          fullName: r.full_name,
+          jersey: r.jersey,
+          playerId: r.player_id == null ? null : Number(r.player_id)
+        };
+      })
+    });
   } catch (err) {
     console.error('list failed:', err);
     return res.status(500).json({ error: 'Could not load submissions.' });
