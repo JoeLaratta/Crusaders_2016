@@ -6,7 +6,10 @@ Youth hockey program site for client Steve, built by Bear Valley Solutions (Joe)
 - Live: https://crusaders-2016.vercel.app/
 - Vercel project `crusaders-2016`, team Bear Valley Solutions (Hobby), user `joe-6694`
 - Repo: `JoeLaratta/Crusaders_2016`, branch `main`, NOT connected to Vercel - deploys are manual
-- Deploy order: `npx vercel --prod` FIRST, then `git add . / commit / push`
+- Deploy: `npx vercel --prod --scope bear-valley-solutions` FIRST, then `git add . / commit / push`
+
+**The `--scope` flag is required.** Without it the CLI returns "Not authorized" even when
+`npx vercel whoami` shows the correct user and active team.
 
 ## How Joe wants to work
 
@@ -14,17 +17,17 @@ Youth hockey program site for client Steve, built by Bear Valley Solutions (Joe)
 - If output needs pasting back, say so immediately after that command, not at the bottom.
 - Concise, copy-paste ready, senior-dev tone. Flag risks and edge cases.
 - Stack: JavaScript, JSON, SQL, APIs, serverless. Windows PowerShell 5.
-- **When writing a PowerShell block to chat, never include triple-backtick fences inside
-  the here-string content.** They terminate the outer markdown fence and shatter one
-  copy box into eight. For files containing fenced markdown, build the file and deliver
-  it as a download instead of a paste.
+- Always include the relevant URLs alongside browser test instructions.
+- **Never put triple-backtick fences inside a PowerShell here-string written to chat.**
+  They terminate the outer markdown fence and shatter one copy box into eight. For files
+  containing fenced markdown, build the file and deliver it as a download.
 
 ---
 
 ## CRITICAL: handbook.html and index.html are NOT plain HTML
 
 Both files contain the real document as an **escaped JSON string** inside a `<script>`
-block, rendered by a small custom runtime.
+block, rendered by a custom `sc-camel` runtime.
 
 - quotes are `\"`, `</div>` is written `<\u002Fdiv>`, `</script>` is `<\u002Fscript>`
 - newlines are the two characters `\n` - NEVER a real line break
@@ -33,18 +36,39 @@ block, rendered by a small custom runtime.
 
 **Edit procedure, every time:**
 
-1. `Copy-Item handbook.html handbook.html.bak`
+1. `Copy-Item handbook.html handbook.html.bakN`
 2. Build exact `$old`/`$new` strings, confirm match count is exactly 1 BEFORE writing
-3. Keep all replacement JS on ONE line - no newlines
-4. Verify line count is unchanged (386) against the .bak
+3. Keep all replacement content on ONE line - no real newlines inside the JSON
+4. Verify the line count against the backup
 5. Only then deploy
+
+**Line count baselines:** the escaped JSON was 386 lines. Edits INSIDE the JSON must
+leave the count unchanged. Appending real markup AFTER `</script>` legitimately grows
+it. Current baseline is **426** (386 plus a 40-line trailing script block).
 
 **Template syntax:** `{{ f.field }}` bindings, `sc-camel-on-change="{{ set.field }}"`,
 `sc-camel-on-click="{{ handler }}"`, `style-hover="..."`, `class="noprint"`.
 Interpolation works inside `style` attributes. `this.setState({...})` MERGES.
 Handlers live in the object returned at the very end of the file.
 
-`login.html`, `reports.html` and `coach.html` are ordinary HTML - none of this applies to them.
+`login.html`, `reports.html` and `coach.html` are ordinary HTML - none of this applies.
+
+### The handbook nav
+
+The nav is plain `<a>` tags inside the escaped JSON - no runtime handlers - so nav
+edits are straight text substitution. Two elements are driven by a trailing script
+block that sits AFTER the runtime's `</script>`, outside the escaped string:
+
+- `#cruPortalLink` - markup default is `Reports` pointing at `/reports.html`. The script
+  flips it to `Coach portal` / `/coach.html` only when `/api/me` confirms `isCoach`.
+  Defaulting to the parent view means a failed fetch still leaves a working link.
+- `#cruLogoutLink` - `Sign out`. POSTs `/api/logout` then redirects. The `href` is a
+  real fallback to `/login.html` if the listener never binds.
+
+**The runtime re-renders the nav on section changes**, which reverts direct DOM edits.
+The portal link therefore uses a `MutationObserver` and logout uses a delegated
+listener on `document`. Do not replace either with a direct `addEventListener` on the
+element - it will silently stop working after the first section click.
 
 ---
 
@@ -52,7 +76,10 @@ Handlers live in the object returned at the very end of the file.
 
 - **OneDrive**: folder is synced. Pause syncing before repeated writes to the 1.3 MB
   files or you get "Access is denied" / phantom "does not exist".
-- **PS5 here-strings** (`@'...'@`): the `'@` terminator must start its own line.
+- **All files written this session use LF line endings.** Patches must use backtick-n,
+  not backtick-r backtick-n. Check first if unsure - a zero-match `.Replace()` fails
+  silently and still reports success.
+- **PS5 here-strings**: the closing terminator must start its own line.
   If the prompt stays at `>>` the paste was mangled - Ctrl+C and use another method.
   Never put a write command and a read command on the same pasted line; they merge
   and PowerShell throws "Unexpected token". This silently skipped a file write once.
@@ -69,18 +96,25 @@ Handlers live in the object returned at the very end of the file.
   Plain `Get-Content` misreads em dashes as mojibake - the FILE is usually fine, the
   reader is wrong. Always verify with ReadAllText before believing a mojibake report.
 - **Verification greps**: strip comment lines first or your own comment text will
-  trip the check. This wasted three round trips:
-
-      ($t -split "`n" | Where-Object { $_ -notmatch '^\s*//' }) -join "`n"
-
+  trip the check. This wasted three round trips.
 - **Vercel Query editor**: ONE statement per Run, Read-only toggle defaults ON.
-  Don't paste the sql fence tag - it throws `syntax error at or near "sql"`.
 - **PS5 `Invoke-WebRequest -MaximumRedirection 0`** throws on 3xx and corrupts the
   exception object. Use `System.Net.Http.HttpClient` with `AllowAutoRedirect = $false`.
 
 ---
 
-## Auth architecture (built Aug 2026)
+## CRITICAL: the 12-function limit
+
+**Vercel Hobby allows a maximum of 12 Serverless Functions per deployment, and every
+file in `/api` counts as one.** Exceeding it fails the deploy outright.
+
+The project sits at **10**. Four admin handlers therefore live in `/lib` (NOT counted)
+and are dispatched by a single `api/admin.js` via `?resource=`. **Do not move them back
+into `/api`, and think before adding a new route** - there are only two slots left.
+
+---
+
+## Auth architecture
 
 The whole site sits behind a login. One login per parent, many-to-many with players.
 
@@ -89,10 +123,10 @@ The whole site sits behind a login. One login per parent, many-to-many with play
 `middleware.js` runs on the Vercel **Edge runtime**, which has no `node:crypto` and
 no `Buffer`. Therefore:
 
-- **`lib/token.js`** - ISOMORPHIC. Web Crypto (`crypto.subtle`) + `atob`/`btoa` only.
+- **`lib/token.js`** - ISOMORPHIC. Web Crypto (`crypto.subtle`) plus `atob`/`btoa` only.
   Imported by middleware AND by lib/auth.js. Adding `Buffer` here breaks the whole site.
 - **`lib/auth.js`** - NODE ONLY. scrypt hashing, temp passwords, the `requireSession`
-  guard. Re-exports everything from token.js so API routes only import this one file.
+  guard. Re-exports everything from token.js so API routes import one file.
   NEVER import this from middleware.js.
 
 `createToken` / `readToken` are **async** (Web Crypto is promise-based). Forgetting
@@ -100,7 +134,7 @@ no `Buffer`. Therefore:
 
 ### Session model
 
-- Signed HMAC-SHA256 token: `base64url(payload).signature`
+- Signed HMAC-SHA256 token: base64url payload, dot, signature
 - Payload: `{ lid, ver, mc, coach, exp }` - login id, token_version, must_change, is_coach
 - Cookie `cru_session`: HttpOnly, Secure, SameSite=Strict, **no Max-Age** (dies on
   browser close). 12-hour hard cap lives in `exp`.
@@ -126,10 +160,7 @@ It writes the 401/403 itself and returns null. Options:
 - `allowMustChange: true` - ONLY for change-password and logout
 - `requireCoach: true` - coach-only endpoints
 
-Then re-check `token_version` against the DB:
-
-    const rows = await sql`select id, token_version from logins where id = ${session.lid} limit 1`;
-    if (!checkVersion(session, rows[0])) return res.status(401).json({ error: '...' });
+Then re-check `token_version` against the DB with `checkVersion(session, rows[0])`.
 
 ### must_change flow
 
@@ -140,12 +171,30 @@ change-password panel.
 
 ---
 
+## Navigation model
+
+**The handbook is the home page for everyone.** Login lands there regardless of role.
+
+- Parent: handbook, `Reports` button, `/reports.html`, "Return to the handbook"
+- Coach: handbook, `Coach portal` button, `/coach.html`, "Return to the handbook"
+- Both: `Sign out` in the handbook nav
+
+`login.html`'s `go()` sends everyone to `/handbook.html`; it keeps its unused `isCoach`
+parameter so the two call sites did not need editing. Middleware redirects a non-coach
+who requests `/coach.html` to `/handbook.html`.
+
+---
+
 ## Files
 
-### lib/
+### lib/ (NOT serverless functions)
 
 - `token.js` - isomorphic sign/verify/cookie helpers (Edge-safe)
-- `auth.js` - Node-only hashing + requireSession/checkVersion
+- `auth.js` - Node-only hashing plus requireSession/checkVersion
+- `admin-players.js` - roster CRUD plus submission linking
+- `admin-logins.js` - parent login management
+- `admin-reports.js` - report upload / status / delete
+- `admin-roster-import.js` - bulk roster paste
 
 ### middleware.js
 
@@ -160,30 +209,61 @@ would return HTML redirects to fetch() callers.
 Requires `@vercel/functions` for `next()`. Non-Next projects cannot use
 `NextResponse.next()`, and a bare `return undefined` is not the current contract.
 
-### api/
+### api/ (10 functions - the limit is 12)
 
 | Route | Method | Auth | Notes |
 |---|---|---|---|
 | `login.js` | POST | public | Timing-safe: dummy hash on unknown user, ~0.4ms delta |
 | `logout.js` | POST | none | Works with broken/absent token, touches no DB |
 | `change-password.js` | POST | mc allowed | Requires current pw, bumps token_version, issues fresh cookie |
-| `me.js` | GET | session | Identity + linked players |
+| `me.js` | GET | session | Identity plus linked players |
 | `reports.js` | GET | session | List; does NOT select r.pdf (blobs) |
 | `report-pdf.js` | GET ?id= | session | Ownership proven in the same query as the bytes |
-| `submit.js` | POST | public | Profile form (TODO: move behind login) |
-| `list.js` | GET | coach | Submissions list (converted from COACH_PASSWORD) |
+| `submit.js` | POST | public | Profile form (TODO: auto-link player_id) |
+| `list.js` | GET | coach | Submissions list, camelCase |
 | `pdf.js` | GET ?id= | coach | Profile PDF via pdf-lib |
-| `admin-players.js` | GET/POST/PATCH | coach | Roster + counts. No DELETE by design |
-| `admin-logins.js` | GET/POST/PATCH/DELETE | coach | Create/reset/assign. Cannot delete self |
-| `admin-reports.js` | - | coach | NOT BUILT YET |
+| `admin.js` | varies | coach | Dispatcher to lib/admin-*.js by ?resource= |
+
+### api/admin.js dispatcher
+
+    /api/admin?resource=players   GET, POST, PATCH, PUT
+    /api/admin?resource=logins    GET, POST, PATCH, DELETE
+    /api/admin?resource=reports   GET, POST, DELETE
+    /api/admin?resource=roster    POST (mode: preview | commit)
+
+Uses `Object.prototype.hasOwnProperty.call` for the lookup - a bare `HANDLERS[resource]`
+would let `?resource=constructor` return a function and invoke it.
+
+`resource=players` PUT links a submission to a player: `{ submissionId, playerId }`,
+playerId null or empty string to unlink.
+
+**KNOWN MINOR ISSUE:** an unknown resource returns 404 before auth runs, so an
+unauthenticated caller can enumerate valid resource names. No data exposed. Fix is to
+move the session check above the resource lookup in `api/admin.js`.
 
 ### Pages
 
-- `index.html` - intro animation (escaped-JSON runtime). TODO: button -> /login.html
-- `handbook.html` - program manual (escaped-JSON runtime)
-- `login.html` - sign in + forced password change. Plain HTML.
+- `index.html` - intro animation (escaped-JSON runtime). TODO: verify button to /login.html
+- `handbook.html` - program manual plus player form. Home page for all roles. 426 lines.
+- `login.html` - sign in plus forced password change. Plain HTML.
 - `reports.html` - parent report list, grouped by player. Plain HTML.
-- `coach.html` - OLD COACH_PASSWORD version. Needs rebuild (Players/Logins/Reports tabs).
+- `coach.html` - coach portal, 844 lines, three tabs. Plain HTML.
+
+### coach.html tabs
+
+- **Players** - roster paste (preview then commit), add single player, roster table with
+  profile submitted / report count / parent count, submissions list with a per-row
+  dropdown to link each submission to a player
+- **Parent Logins** - create with player checkboxes, temp password shown ONCE, reset
+  (warns when resetting self), assign players, delete (own row's delete hidden)
+- **Reports** - multi-file picker with filename auto-match, sequential upload with
+  per-file status, published table showing "N of M downloaded" plus which parents
+  opened it, delete
+
+**Filename matching uses WHOLE WORDS, not substrings.** With `indexOf`, a file named
+`Jackson_Lightfoot.pdf` matches a player called `Jack Li` (jack inside jackson, li
+inside lightfoot) and one child's report gets published to another family. Ties break
+toward the longer name so `Samantha Ngo` beats `Sam Ng`. Do not "simplify" this.
 
 ---
 
@@ -200,6 +280,9 @@ Requires `@vercel/functions` for `next()`. Non-Next projects cannot use
   responses; another family's report id and a nonexistent one both 404.
 - Escape everything interpolated into HTML with an `esc()` helper - Steve types the
   player names and report titles.
+- Duplicate-name detection strips apostrophes BEFORE collapsing punctuation, so
+  `O'Brien` and `OBrien` match. Replacing the apostrophe with a space instead produces
+  `o brien` vs `obrien` and creates duplicate player records.
 
 ## pdf-lib gotcha
 
@@ -217,22 +300,24 @@ bottom of the page.
                    token_version (default 1), is_coach (default false), created_at
     login_players  login_id, player_id  (composite PK, both ON DELETE CASCADE)
     reports        id, player_id, title, pdf BYTEA, published_at
-    report_views   report_id, login_id, viewed_at  (composite PK - required by the
-                   ON CONFLICT clause in report-pdf.js)
+    report_views   report_id, login_id, viewed_at  (composite PK, both FKs CASCADE -
+                   verified, so deleting a report cleans up its view records)
     submissions    id, created_at, full_name, jersey, data JSONB, player_id BIGINT NULL
 
-Password hash format: `s1$<base64url salt>$<base64url key>`, scrypt, 112 chars.
+Password hash format: `s1$` then base64url salt then `$` then base64url key.
+scrypt, 112 chars total.
 
 ## Env vars (Vercel)
 
 - `DATABASE_URL` - auto from Neon integration
-- `SESSION_SECRET` - Production + Preview. **Missing = total lockout** (middleware
+- `SESSION_SECRET` - Production plus Preview. **Missing = total lockout** (middleware
   fails closed and login 500s).
-- `COACH_PASSWORD` - LEGACY. Delete once coach.html is rebuilt and deployed.
+- `COACH_PASSWORD` - LEGACY, nothing references it. Safe to delete.
 
-## Seeding the first coach login
+## Seeding a coach login
 
-No UI creates a coach. Generate a hash locally, then INSERT the row by hand.
+No UI creates a coach - `is_coach` is hard-coded false in admin-logins.js. Generate a
+hash locally, then INSERT by hand.
 
     $sec = Read-Host "password" -AsSecureString
     $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
@@ -256,7 +341,7 @@ Then, with Read-only OFF in the Vercel Query editor:
     $handler = New-Object System.Net.Http.HttpClientHandler
     $handler.AllowAutoRedirect = $false
     $client = New-Object System.Net.Http.HttpClient($handler)
-    foreach ($p in @('/', '/login.html', '/handbook.html', '/package.json', '/api/me')) {
+    foreach ($p in @('/', '/login.html', '/handbook.html', '/coach.html', '/package.json', '/api/me')) {
       $r = $client.GetAsync("https://crusaders-2016.vercel.app$p").Result
       $loc = ""; if ($r.Headers.Location) { $loc = " -> " + $r.Headers.Location.ToString() }
       "{0,-18} {1}{2}" -f $p, [int]$r.StatusCode, $loc
@@ -264,36 +349,49 @@ Then, with Read-only OFF in the Vercel Query editor:
     }
     $client.Dispose()
 
-Expected: `/` and `/login.html` 200; `/handbook.html` and `/package.json` 302 to
-/login.html; `/api/me` **401 not 302** (proves the matcher excludes /api).
+Expected: `/` and `/login.html` 200; `/handbook.html`, `/coach.html` and `/package.json`
+302 to /login.html; `/api/me` **401 not 302** (proves the matcher excludes /api).
+
+---
+
+## Verified working in production
+
+Full lifecycle tested end to end on 2026-08-15:
+login, forced password change, handbook landing, adaptive nav button, sign out,
+roster paste import (17 players), parent login creation with a two-child family,
+temp password one-time display, multi-file report upload with filename auto-match,
+parent report list grouped by player, NEW badge clearing per login, and coach-side
+"N of M downloaded" tracking.
+
+574 automated assertions across 12 test suites, zero failures.
 
 ---
 
 ## Outstanding work
 
-1. `api/admin-reports.js` - upload PDF (base64 -> BYTEA), list download status.
-   Vercel body limit is 4.5 MB, so ~3.3 MB PDF ceiling after base64 inflation.
-   Steve's reports come from ChatGPT as text PDFs (50-300 KB), so this is fine.
-2. Rebuild `coach.html` with Players / Logins / Reports tabs. **Until this is done,
-   do NOT deploy** - list.js and pdf.js have already been converted to session auth
-   and camelCase, which breaks the current coach.html.
-3. Rewire index.html "Welcome Crusader" button -> `/login.html`.
-4. Move the profile form behind login; auto-link `submissions.player_id`.
-   Two-player family needs a picker.
-5. Delete the `COACH_PASSWORD` env var.
-6. Verify the 52 mojibake em-dashes in handbook.html were actually fixed.
-7. Confirm the new index.html animation is live.
+1. **Player form auto-link.** The form lives inside `handbook.html` and submits to
+   `api/submit.js` without a `player_id`. Needs `/api/me` on load, a picker when the
+   login has more than one player, and `player_id` passed through to submit.js.
+2. **Verify `index.html`'s "Welcome Crusader" button** points at `/login.html`.
+3. **Delete the `COACH_PASSWORD` env var** - nothing references it.
+4. **Move the auth check above the resource lookup in `api/admin.js`** (see known issue).
+5. Verify the 52 mojibake em-dashes in handbook.html were actually fixed.
+6. Consider adding `*.bak*` to `.gitignore` - backups are being committed.
+7. Steve's real roster replaces the 17 test players; delete the test data first.
 
 ## Known accepted limitations
 
-- Downloaded != read. `report_views` records first download only.
+- Downloaded is not the same as read. `report_views` records first download only.
 - Mobile browsers keep session cookies alive in the background, so the 12h `exp`
   is the real bound, not browser close.
 - `setPlayers()` in admin-logins.js is not transactional (neon http mode). Worst
   case is a login with zero players, visible in the UI and one click to fix.
+- Roster import re-paste adds new names but does NOT update jersey numbers on
+  existing rows. Use Edit for those.
 - No self-service password reset. Steve resets from the portal.
 - No failed-login throttling. Serverless has no shared memory; would need a DB column.
-  Temp passwords are 32^12 so brute force is impractical, but parent-chosen
+  Temp passwords are 32 to the 12th so brute force is impractical, but parent-chosen
   passwords after first change are only min-8 with no composition rules (NIST).
-- `api/pdf.js` leaves a double space where an emoji was stripped from a name
-  (`Ben (emoji) Smith` -> `Ben  Smith`). Cosmetic only.
+- Report upload ceiling is roughly 3 MB per PDF (Vercel's 4.5 MB body limit less
+  base64 inflation). Steve's ChatGPT-generated text PDFs run 50-300 KB.
+- `api/pdf.js` leaves a double space where an emoji was stripped from a name.
