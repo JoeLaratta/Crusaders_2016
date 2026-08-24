@@ -1,2 +1,7 @@
-﻿.vercel
+.vercel
 node_modules
+
+# Local backups of the escaped-JSON files. Kept on disk, never committed.
+*.bak
+*.bak[0-9]
+*.bak[0-9][0-9]
