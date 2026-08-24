@@ -431,7 +431,9 @@ roster. All test players, logins, reports and submissions were deleted.
 ## Outstanding work
 
 1. Steve imports his real roster via the Players tab.
-2. Verify the 52 mojibake em-dashes in handbook.html were actually fixed. Never confirmed.
+2. RESOLVED. handbook.html has 46 em dashes and 5 en dashes, all correctly encoded UTF-8,
+   and zero mojibake sequences. The original "52 mojibake em-dashes" report was almost
+   certainly Get-Content misreading UTF-8 as ANSI, not a real corruption.
 3. Consider adding `*.bak*` to `.gitignore` - backups are being committed, including a
    1.3 MB `handbook.html.bak5`.
 
