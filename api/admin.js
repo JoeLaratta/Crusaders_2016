@@ -13,6 +13,7 @@ import players from '../lib/admin-players.js';
 import logins from '../lib/admin-logins.js';
 import reports from '../lib/admin-reports.js';
 import roster from '../lib/admin-roster-import.js';
+import { requireSession } from '../lib/auth.js';
 
 const HANDLERS = {
   players: players,
@@ -22,6 +23,11 @@ const HANDLERS = {
 };
 
 export default async function handler(req, res) {
+  // Authenticate BEFORE looking at the resource name. Checking the map first
+  // leaks which resources exist: an unknown one 404s while a real one 401s.
+  const session = await requireSession(req, res, { requireCoach: true });
+  if (!session) return;
+
   const resource = String((req.query && req.query.resource) || '');
   if (!Object.prototype.hasOwnProperty.call(HANDLERS, resource)) {
     return res.status(404).json({ error: 'Unknown admin resource' });
