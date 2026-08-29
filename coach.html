@@ -143,6 +143,17 @@
       <div id="newPasswordBox"></div>
     </div>
 
+    <div class="panel">
+      <h2>Generate logins for the whole roster</h2>
+      <p class="muted">Creates one login for every player who does not have one yet.
+        Players who already have a login are skipped, so this is safe to run more than once.
+        The temporary codes are shown once only - copy them before leaving this page.</p>
+      <div class="row">
+        <div style="flex:0 0 auto"><button class="btn" id="bulkLoginsBtn" type="button">Generate logins for all players</button></div>
+      </div>
+      <div id="bulkLoginsMsg" class="msg"></div>
+      <div id="bulkLoginsBox"></div>
+    </div>
     <h3>Existing logins</h3>
     <div class="panel" id="loginsPanel"><p class="state">Loading...</p></div>
   </section>
@@ -664,6 +675,94 @@
       b.addEventListener("click", function () { assignPlayers(Number(b.getAttribute("data-assign"))); });
     });
   }
+
+  // ---------- bulk login generation ----------
+  // Codes are hashed on save and cannot be retrieved later, so the table below
+  // is the only chance to copy them.
+  function copyText(text, btn) {
+    var done = function () {
+      if (!btn) return;
+      var old = btn.textContent;
+      btn.textContent = "Copied";
+      window.setTimeout(function () { btn.textContent = old; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+  function fallbackCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { flash("Could not copy - select the code manually.", "err"); }
+    document.body.removeChild(ta);
+  }
+  function renderBulkResults(created) {
+    var box = $("bulkLoginsBox");
+    var html = '<p class="muted" style="margin-top:14px"><strong>' + created.length +
+      ' login' + (created.length === 1 ? '' : 's') +
+      ' created.</strong> Copy these now - they cannot be shown again.</p>' +
+      '<div class="row" style="margin-bottom:10px"><div style="flex:0 0 auto">' +
+      '<button class="btn" id="copyAllCodesBtn" type="button">Copy all</button></div></div>' +
+      '<table><thead><tr><th>Player</th><th>Username</th><th>Temporary code</th><th></th></tr></thead><tbody>';
+    created.forEach(function (c) {
+      html += "<tr>" +
+        "<td>" + esc(c.playerName) + "</td>" +
+        "<td><code>" + esc(c.username) + "</code></td>" +
+        "<td><code>" + esc(c.tempPassword) + "</code></td>" +
+        '<td><button class="link" data-copy="' + esc(c.username) + "|" + esc(c.tempPassword) + '">Copy</button></td>' +
+      "</tr>";
+    });
+    html += "</tbody></table>";
+    box.innerHTML = html;
+
+    Array.prototype.forEach.call(box.querySelectorAll("[data-copy]"), function (b) {
+      b.addEventListener("click", function () {
+        var parts = b.getAttribute("data-copy").split("|");
+        copyText("Username: " + parts[0] + "\nTemporary code: " + parts[1], b);
+      });
+    });
+    var all = $("copyAllCodesBtn");
+    if (all) {
+      all.addEventListener("click", function () {
+        var text = created.map(function (c) {
+          return c.playerName + "\tUsername: " + c.username + "\tTemporary code: " + c.tempPassword;
+        }).join("\n");
+        copyText(text, all);
+      });
+    }
+  }
+  $("bulkLoginsBtn").addEventListener("click", function () {
+    var btn = $("bulkLoginsBtn");
+    var msg = $("bulkLoginsMsg");
+    if (!window.confirm("Create a login for every player who does not have one yet?")) return;
+    btn.disabled = true;
+    show(msg, "Generating...", "ok");
+    api(ADMIN + "logins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "bulk" })
+    }).then(function (d) {
+      btn.disabled = false;
+      if (!d.created || !d.created.length) {
+        show(msg, d.message || "Every player already has a login.", "ok");
+        $("bulkLoginsBox").innerHTML = "";
+        return;
+      }
+      clear(msg);
+      renderBulkResults(d.created);
+      loadLogins();
+      loadPlayers();
+    }).catch(function (e) {
+      btn.disabled = false;
+      show(msg, e.message, "err");
+    });
+  });
 
   function findLogin(id) {
     var found = null;
