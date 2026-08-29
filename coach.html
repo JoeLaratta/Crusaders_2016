@@ -657,7 +657,7 @@
           ? '<span class="muted">must change password</span>'
           : '<span class="yes">active</span>') + "</td>" +
         '<td style="white-space:nowrap">' +
-          (l.isCoach ? "" : '<button class="link" data-assign="' + l.id + '">Players</button> ') +
+          ('<button class="link" data-assign="' + l.id + '">Players</button> ') +
           '<button class="link" data-reset="' + l.id + '">Reset</button>' +
           (l.isSelf ? "" : ' <button class="link" data-del="' + l.id + '">Delete</button>') +
         "</td></tr>";

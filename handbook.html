@@ -420,19 +420,57 @@ document.addEventListener('DOMContentLoaded', async function() {
     var st = document.createElement("style");
     st.id = "cruShotsCss";
     st.textContent =
-      ".cru-shots{position:fixed;top:12px;right:150px;z-index:2147483000;display:flex;align-items:center}" +
-      ".cru-shots .cru-shot{width:64px;height:64px;border-radius:50%;object-fit:cover;" +
+      ".cru-shots{position:fixed;top:22px;right:150px;z-index:2147483000;display:flex;align-items:center}" +
+      ".cru-shots .cru-shot{width:96px;height:96px;border-radius:50%;object-fit:cover;" +
       "border:2px solid #fff;background:#CA8907;box-shadow:0 1px 4px rgba(0,0,0,.35);margin-left:-14px}" +
       ".cru-shots .cru-shot:first-child{margin-left:0}" +
       ".cru-shots .cru-init{display:flex;align-items:center;justify-content:center;" +
-      "font:700 20px/1 Oswald,Arial,sans-serif;color:#412402}" +
+      "font:700 30px/1 Oswald,Arial,sans-serif;color:#412402}" +
       "@media(max-width:840px){.cru-shots{top:auto;bottom:14px;right:14px}}" +
       "@media print{.cru-shots{display:none}}";
     document.head.appendChild(st);
   }
+  // Anchor to the right edge of the Sign out link so the badge clears the nav
+  // at any window width and with any number of players.
+  function positionShots(wrap) {
+    // <=840px: the CSS media query owns placement (bottom-right). Clear any
+    // inline overrides so it can.
+    if (window.innerWidth <= 840) {
+      wrap.style.top = "";
+      wrap.style.right = "";
+      return;
+    }
+    var so = document.getElementById("cruLogoutLink");
+    if (!so) return;
+    var r = so.getBoundingClientRect();
+    if (!r.width) return;
+    var w = wrap.getBoundingClientRect().width || 96;
+    var vw = document.documentElement.clientWidth;
+    var spaceRight = vw - r.right;
+    if (spaceRight >= w + 28) {
+      // Fits beside Sign out: left edge 16px past the link, vertically
+      // centred on it.
+      wrap.style.top = Math.max(8, Math.round(r.top + (r.height / 2) - 48)) + "px";
+      wrap.style.right = Math.max(8, Math.round(spaceRight - w - 16)) + "px";
+    } else {
+      // Too wide for the gap (twins at normal window sizes): tuck below the
+      // nav bar's right corner instead of covering the links.
+      wrap.style.top = Math.round(r.bottom + 16) + "px";
+      wrap.style.right = "16px";
+    }
+  }
+  var cruShotsResize = null;
+  window.addEventListener("resize", function () {
+    if (cruShotsResize) window.clearTimeout(cruShotsResize);
+    cruShotsResize = window.setTimeout(function () {
+      var w = document.getElementById("cruNavShots");
+      if (w) { try { positionShots(w); } catch (e) {} }
+    }, 150);
+  });
   function applyShots() {
     if (!cruShotData || !cruShotData.length) return;
-    if (document.getElementById("cruNavShots")) return;
+    var existing = document.getElementById("cruNavShots");
+    if (existing) { try { positionShots(existing); } catch (e) {} return; }
     ensureShotsCss();
     var wrap = document.createElement("div");
     wrap.id = "cruNavShots";
@@ -455,6 +493,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       wrap.appendChild(el);
     });
     document.body.appendChild(wrap);
+    try { positionShots(wrap); } catch (e) {}
   }
   // Logo proportional to the badge circles: 38px -> 52px.
   function applyLogo() {
