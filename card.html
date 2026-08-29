@@ -5,10 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Player Card - Crusaders 2016</title>
 <style>
-  /* Team colours live here - change these two lines to restyle every card. */
+  /* Palette sampled from the team logo:
+     black #1A1208 (visor), gold #CA8907 (armour), red #A80806 (plume). */
   :root {
-    --team-dark: #14213d;
-    --team-accent: #c8102e;
+    --team-dark: #1A1208;
+    --team-accent: #CA8907;
+    --team-red: #A80806;
+    --accent-ink: #412402;
+    --season-ink: #D9A94E;
     --ink: #1f2937;
     --muted: #6b7280;
     --line: #e5e7eb;
@@ -51,7 +55,7 @@
     border-color: var(--team-dark);
     color: #fff;
   }
-  button:hover { filter: brightness(1.08); }
+  button:hover { filter: brightness(1.15); }
 
   .state {
     max-width: 760px;
@@ -59,7 +63,7 @@
     text-align: center;
     color: var(--muted);
   }
-  .state.err { color: var(--team-accent); }
+  .state.err { color: var(--team-red); }
 
   /* ---------- the card ---------- */
   .card {
@@ -95,16 +99,16 @@
     justify-content: center;
     font-size: 34px;
     font-weight: 700;
-    color: var(--team-dark);
-    background: #dbe1ea;
+    color: var(--accent-ink);
+    background: var(--team-accent);
   }
 
-  .who { min-width: 0; }
+  .who { min-width: 0; flex: 1 1 auto; }
   .who .season {
     font-size: 12px;
     letter-spacing: .09em;
     text-transform: uppercase;
-    opacity: .75;
+    color: var(--season-ink);
   }
   .who h2 {
     margin: 3px 0 6px;
@@ -115,10 +119,18 @@
   .who .num {
     display: inline-block;
     background: var(--team-accent);
+    color: var(--accent-ink);
     padding: 3px 11px;
     border-radius: 999px;
     font-size: 14px;
     font-weight: 700;
+  }
+
+  .crest {
+    width: 112px;
+    height: 112px;
+    object-fit: contain;
+    flex: 0 0 auto;
   }
 
   .card-body { padding: 20px 24px 24px; }
@@ -130,7 +142,7 @@
     color: var(--muted);
     margin: 20px 0 10px;
     padding-bottom: 5px;
-    border-bottom: 2px solid var(--line);
+    border-bottom: 2px solid var(--team-accent);
   }
   .sect-title:first-child { margin-top: 0; }
 
@@ -152,7 +164,8 @@
   .qa .a {
     font-size: 16px;
     padding-left: 12px;
-    border-left: 3px solid var(--team-accent);
+    border-left: 3px solid var(--team-red);
+    border-radius: 0;
     word-break: break-word;
   }
 
@@ -175,6 +188,12 @@
     flex-wrap: wrap;
   }
 
+  /* Narrow phones: stack the header so the crest does not squeeze the name. */
+  @media (max-width: 520px) {
+    .card-top { flex-wrap: wrap; gap: 14px; }
+    .crest { width: 76px; height: 76px; }
+  }
+
   /* ---------- print / save as PDF ---------- */
   @page { size: letter portrait; margin: 0.45in; }
 
@@ -188,10 +207,10 @@
       max-width: none;
       break-inside: avoid;
     }
-    /* One card per sheet, but no trailing blank page. */
+    /* One card per sheet, with no trailing blank page. */
     .card + .card { break-before: page; }
     /* Chrome drops backgrounds by default; keep the team colours. */
-    .card-top, .who .num, .shot-empty {
+    .card-top, .who .num, .shot-empty, .sect-title, .qa .a {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -215,6 +234,7 @@
   "use strict";
 
   var SEASON = "2016 Crusaders";
+  var CREST = "/favicon.png";
 
   // Question wording matches the labels on the handbook form so the card
   // reads back the way the parent filled it in.
@@ -308,6 +328,7 @@
           "<h2>" + esc(p.name) + "</h2>" +
           (p.jersey ? '<span class="num">#' + esc(p.jersey) + "</span>" : "") +
         "</div>" +
+        '<img class="crest" src="' + CREST + '" alt="Crusaders logo">' +
       "</div>" +
       '<div class="card-body">';
 
