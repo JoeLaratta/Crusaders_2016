@@ -175,7 +175,7 @@
   "use strict";
 
   var ADMIN = "/api/admin?resource=";
-  var state = { players: [], logins: [], reports: [], submissions: [], files: [], rosterParsed: null };
+  var state = { players: [], logins: [], reports: [], submissions: [], files: [], rosterParsed: null, photoCache: {} };
 
   // ---------- helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -239,16 +239,125 @@
   });
 
   // ---------- players ----------
+  // ---------- player photos ----------
+  // Headshots are stored as base64 data URLs on players.photo. The browser
+  // resizes before upload so the database stays small and the parent-facing
+  // card loads fast.
+  var PHOTO_MAX_PX = 400;
+  var PHOTO_QUALITY = 0.82;
+
+  function resizePhoto(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file.type || file.type.indexOf("image/") !== 0) {
+        reject(new Error("That file is not an image."));
+        return;
+      }
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error("Could not read that file.")); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error("Could not open that image.")); };
+        img.onload = function () {
+          // Square crop from the centre so every card frames the same way.
+          var side = Math.min(img.width, img.height);
+          var sx = Math.round((img.width - side) / 2);
+          var sy = Math.round((img.height - side) / 2);
+          var canvas = document.createElement("canvas");
+          canvas.width = PHOTO_MAX_PX;
+          canvas.height = PHOTO_MAX_PX;
+          var ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, PHOTO_MAX_PX, PHOTO_MAX_PX);
+          ctx.drawImage(img, sx, sy, side, side, 0, 0, PHOTO_MAX_PX, PHOTO_MAX_PX);
+          resolve(canvas.toDataURL("image/jpeg", PHOTO_QUALITY));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // One reusable file input, created once and pointed at whichever player
+  // the coach clicked.
+  var photoInput = null;
+  var photoTargetId = null;
+
+  function ensurePhotoInput() {
+    if (photoInput) return photoInput;
+    photoInput = document.createElement("input");
+    photoInput.type = "file";
+    photoInput.accept = "image/*";
+    photoInput.style.display = "none";
+    photoInput.addEventListener("change", function () {
+      var file = photoInput.files && photoInput.files[0];
+      var id = photoTargetId;
+      photoInput.value = "";
+      photoTargetId = null;
+      if (!file || !id) return;
+      uploadPlayerPhoto(id, file);
+    });
+    document.body.appendChild(photoInput);
+    return photoInput;
+  }
+
+  function uploadPlayerPhoto(id, file) {
+    flash("Resizing photo...", "ok");
+    resizePhoto(file).then(function (dataUrl) {
+      return api(ADMIN + "players", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: id, photo: dataUrl })
+      });
+    }).then(function () {
+      delete state.photoCache[id];
+      flash("Photo saved.", "ok");
+      loadPlayers();
+    }).catch(function (e) { flash(e.message, "err"); });
+  }
+
+  function removePlayerPhoto(id, name) {
+    if (!window.confirm("Remove the photo for " + name + "?")) return;
+    api(ADMIN + "players", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, photo: null })
+    }).then(function () {
+      delete state.photoCache[id];
+      flash("Photo removed.", "ok");
+      loadPlayers();
+    }).catch(function (e) { flash(e.message, "err"); });
+  }
+
+  // Thumbnails load one player at a time, on demand, so the roster list
+  // itself never carries image bytes.
+  function loadThumb(id, imgEl) {
+    if (state.photoCache[id]) {
+      imgEl.src = state.photoCache[id];
+      return;
+    }
+    api(ADMIN + "players&playerId=" + id).then(function (d) {
+      if (!d.photo) return;
+      state.photoCache[id] = d.photo;
+      imgEl.src = d.photo;
+    }).catch(function () { /* thumbnail is cosmetic - stay quiet */ });
+  }
+
+  // ---------- players ----------
   function renderPlayers() {
     var el = $("playersPanel");
     if (!state.players.length) {
       el.innerHTML = '<p class="state">No players yet. Import a roster above to get started.</p>';
       return;
     }
-    var html = '<table><thead><tr><th>Name</th><th>Jersey</th><th>Profile</th>' +
+    var html = '<table><thead><tr><th>Photo</th><th>Name</th><th>Jersey</th><th>Profile</th>' +
       '<th class="hide-sm">Reports</th><th class="hide-sm">Parents</th><th></th></tr></thead><tbody>';
     state.players.forEach(function (p) {
+      var photoCell = p.hasPhoto
+        ? '<img class="thumb" data-thumb="' + p.id + '" alt="" ' +
+          'style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:#e5e7eb;vertical-align:middle">'
+        : '<span class="no">-</span>';
       html += "<tr>" +
+        "<td>" + photoCell + "</td>" +
         '<td><span class="pname" data-id="' + p.id + '">' + esc(p.name) + "</span></td>" +
         "<td>" + (p.jersey ? esc(p.jersey) : '<span class="no">-</span>') + "</td>" +
         "<td>" + (p.submissionCount > 0
@@ -257,7 +366,12 @@
         '<td class="hide-sm">' + p.reportCount + "</td>" +
         '<td class="hide-sm">' + (p.loginCount > 0 ? p.loginCount
           : '<span class="no">none</span>') + "</td>" +
-        '<td><button class="link" data-edit="' + p.id + '">Edit</button></td>' +
+        '<td><button class="link" data-photo="' + p.id + '">' +
+          (p.hasPhoto ? "Replace photo" : "Add photo") + "</button>" +
+          (p.hasPhoto
+            ? ' <button class="link" data-rmphoto="' + p.id + '">Remove</button>'
+            : "") +
+          ' <button class="link" data-edit="' + p.id + '">Edit</button></td>' +
       "</tr>";
     });
     html += "</tbody></table>";
@@ -265,6 +379,26 @@
 
     Array.prototype.forEach.call(el.querySelectorAll("[data-edit]"), function (b) {
       b.addEventListener("click", function () { editPlayer(Number(b.getAttribute("data-edit"))); });
+    });
+
+    Array.prototype.forEach.call(el.querySelectorAll("[data-photo]"), function (b) {
+      b.addEventListener("click", function () {
+        photoTargetId = Number(b.getAttribute("data-photo"));
+        ensurePhotoInput().click();
+      });
+    });
+
+    Array.prototype.forEach.call(el.querySelectorAll("[data-rmphoto]"), function (b) {
+      b.addEventListener("click", function () {
+        var id = Number(b.getAttribute("data-rmphoto"));
+        var nm = "";
+        state.players.forEach(function (x) { if (x.id === id) nm = x.name; });
+        removePlayerPhoto(id, nm);
+      });
+    });
+
+    Array.prototype.forEach.call(el.querySelectorAll("[data-thumb]"), function (im) {
+      loadThumb(Number(im.getAttribute("data-thumb")), im);
     });
   }
 
