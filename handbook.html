@@ -448,6 +448,28 @@ document.addEventListener('DOMContentLoaded', async function() {
   // the login actually owns the chosen player before storing it.
   window.__cruPlayerId = null;
   var cruPlayers = [];
+  // Clear the autosaved draft after a successful submit so the next twin
+  // starts from a blank form. Applies only to multi-player logins; a
+  // single-child family keeps their answers on screen. The form's own code
+  // lives inside the sc-camel string, so window.fetch is wrapped instead of
+  // patching the form.
+  var cruOrigFetch = window.fetch;
+  window.fetch = function (input, init) {
+    var url = typeof input === "string" ? input : ((input && input.url) || "");
+    var method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
+    var isSubmit = method === "POST" && url.indexOf("/api/submit") !== -1;
+    var p = cruOrigFetch.apply(this, arguments);
+    if (!isSubmit) return p;
+    return p.then(function (res) {
+      if (res && res.ok && cruPlayers.length > 1) {
+        try { localStorage.removeItem("crusaders-player-form-v1"); } catch (e) {}
+        // Let the runtime show its confirmation, then reload with a clean
+        // form for the next player.
+        window.setTimeout(function () { window.location.reload(); }, 1800);
+      }
+      return res;
+    });
+  };
   function escHtml(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');

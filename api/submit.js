@@ -1,8 +1,9 @@
 // api/submit.js - player profile form. Now behind login so submissions
-// auto-link to a player. The client's playerId is only a HINT: the server
-// verifies the login actually owns that player before storing it.
-// For multi-player logins (twins) with no hint, we fall back to matching
-// the submitted fullName against the login's linked players.
+// auto-link to a player. For multi-player logins (twins) the typed full name
+// is the ground truth: parents submit for both kids back-to-back in one
+// session, so the client's playerId hint can be stale from the previous
+// child. The hint is only a fallback when the name matches nobody, and it is
+// still verified against the login's own players before being stored.
 import { neon } from '@neondatabase/serverless';
 import { requireSession, checkVersion } from '../lib/auth.js';
 const sql = neon(process.env.DATABASE_URL);
@@ -84,17 +85,18 @@ export default async function handler(req, res) {
     const allowed = mine.map(function (p) { return Number(p.id); });
     let playerId = null;
     if (allowed.length === 1) {
-      // Only one child - the hint is irrelevant.
+      // Only one child - name and hint are both irrelevant.
       playerId = allowed[0];
     } else if (allowed.length > 1) {
-      const hint = Number(body.playerId);
-      if (Number.isInteger(hint) && allowed.indexOf(hint) !== -1) {
-        playerId = hint;
-      } else {
-        // No usable hint (handbook form does not send one). Match the
-        // submitted name against this login's players instead.
-        playerId = matchPlayerByName(fullName, mine);
-        if (playerId === null) {
+      // NAME FIRST. Twins are submitted back-to-back in the same session, so
+      // the picker hint can be left over from the previous child. The typed
+      // name decides; the hint only breaks a tie when the name matches nobody.
+      playerId = matchPlayerByName(fullName, mine);
+      if (playerId === null) {
+        const hint = Number(body.playerId);
+        if (Number.isInteger(hint) && allowed.indexOf(hint) !== -1) {
+          playerId = hint;
+        } else {
           return res.status(400).json({
             error: 'Please enter the player\'s full name exactly as it appears on the roster.'
           });
