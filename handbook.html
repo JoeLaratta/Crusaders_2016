@@ -396,16 +396,34 @@ document.addEventListener('DOMContentLoaded', async function() {
       a.textContent = "Coach portal";
     }
   }
+  // Parent-facing player card link. The nav markup lives inside the sc-camel
+  // JSON string and must not be edited, so the link is cloned at runtime from
+  // the portal link - that way it inherits the nav styling for free.
+  var hasPlayers = false;
+  function applyCardLink() {
+    if (!hasPlayers) return;
+    if (document.getElementById("cruCardLink")) return;
+    var host = document.getElementById("cruPortalLink");
+    if (!host || !host.parentNode) return;
+    var a = host.cloneNode(true);
+    a.id = "cruCardLink";
+    a.setAttribute("href", "/card.html");
+    a.textContent = "Player card";
+    host.parentNode.insertBefore(a, host.nextSibling);
+  }
+  function applyNav() { apply(); applyCardLink(); }
   fetch("/api/me", { credentials: "same-origin" })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (me) {
       isCoach = !!(me && me.isCoach);
-      if (!isCoach) return;
-      apply();
-      // The sc-camel runtime re-renders on state changes, which would revert
-      // the label. Re-apply whenever the DOM changes. Coach sessions only.
+      hasPlayers = !!(me && me.players && me.players.length);
+      applyNav();
+      // The sc-camel runtime re-renders on state changes, which would discard
+      // both the coach label and the cloned link. Re-apply on every DOM change.
+      // Both apply functions bail out early when there is nothing to do, so
+      // the observer cannot loop on its own insertion.
       if (window.MutationObserver) {
-        new MutationObserver(apply).observe(document.body, { childList: true, subtree: true });
+        new MutationObserver(applyNav).observe(document.body, { childList: true, subtree: true });
       }
     })
     .catch(function () { /* leave the parent default in place */ });
