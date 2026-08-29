@@ -411,7 +411,68 @@ document.addEventListener('DOMContentLoaded', async function() {
     a.textContent = "Player card";
     host.parentNode.insertBefore(a, host.nextSibling);
   }
-  function applyNav() { apply(); applyCardLink(); }
+  // Floating player headshot badge. The header is position:static and scrolls
+  // away, so the badge is fixed to the viewport instead: top-right on desktop,
+  // bottom-right on phones (where the wrapped nav occupies the top corner).
+  var cruShotData = null;
+  function ensureShotsCss() {
+    if (document.getElementById("cruShotsCss")) return;
+    var st = document.createElement("style");
+    st.id = "cruShotsCss";
+    st.textContent =
+      ".cru-shots{position:fixed;top:12px;right:150px;z-index:2147483000;display:flex;align-items:center}" +
+      ".cru-shots .cru-shot{width:64px;height:64px;border-radius:50%;object-fit:cover;" +
+      "border:2px solid #fff;background:#CA8907;box-shadow:0 1px 4px rgba(0,0,0,.35);margin-left:-14px}" +
+      ".cru-shots .cru-shot:first-child{margin-left:0}" +
+      ".cru-shots .cru-init{display:flex;align-items:center;justify-content:center;" +
+      "font:700 20px/1 Oswald,Arial,sans-serif;color:#412402}" +
+      "@media(max-width:840px){.cru-shots{top:auto;bottom:14px;right:14px}}" +
+      "@media print{.cru-shots{display:none}}";
+    document.head.appendChild(st);
+  }
+  function applyShots() {
+    if (!cruShotData || !cruShotData.length) return;
+    if (document.getElementById("cruNavShots")) return;
+    ensureShotsCss();
+    var wrap = document.createElement("div");
+    wrap.id = "cruNavShots";
+    wrap.className = "cru-shots";
+    cruShotData.forEach(function (p) {
+      var el;
+      if (p.photo) {
+        el = document.createElement("img");
+        el.className = "cru-shot";
+        el.src = p.photo;
+        el.alt = p.name;
+      } else {
+        el = document.createElement("div");
+        el.className = "cru-shot cru-init";
+        var parts = String(p.name || "").trim().split(/\s+/);
+        el.textContent = ((parts[0] || "").charAt(0) +
+          (parts.length > 1 ? parts[parts.length - 1].charAt(0) : "")).toUpperCase();
+      }
+      el.title = p.name;
+      wrap.appendChild(el);
+    });
+    document.body.appendChild(wrap);
+  }
+  // Logo proportional to the badge circles: 38px -> 52px.
+  function applyLogo() {
+    var im = document.querySelector('img[alt="Crusaders"]');
+    if (!im) return;
+    if (im.style.width !== "52px") { im.style.width = "52px"; im.style.height = "52px"; }
+  }
+  function applyNav() { apply(); applyCardLink(); applyLogo(); applyShots(); }
+  // Photos ride the cards payload; the light /api/me call stays image-free.
+  fetch("/api/me?cards=1", { credentials: "same-origin" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      cruShotData = ((d && d.players) || []).map(function (p) {
+        return { name: p.name, photo: p.photo || null };
+      });
+      applyShots();
+    })
+    .catch(function () { /* badge is cosmetic - stay quiet */ });
   fetch("/api/me", { credentials: "same-origin" })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (me) {
